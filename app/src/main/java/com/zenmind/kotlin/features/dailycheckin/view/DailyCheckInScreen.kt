@@ -58,12 +58,14 @@ import com.zenmind.kotlin.ui.theme.ZenSubtle
 @Composable
 fun DailyCheckInScreen(
     onBack: () -> Unit,
+    onGoToBreathing: () -> Unit,
     checkInViewModel: DailyCheckInViewModel = viewModel(factory = DailyCheckInViewModel.Factory)
 ) {
     val state by checkInViewModel.uiState.collectAsStateWithLifecycle()
     DailyCheckInContent(
         state = state,
         onBack = onBack,
+        onGoToBreathing = onGoToBreathing,
         onMoodSelected = checkInViewModel::onMoodSelected,
         onNoteChange = checkInViewModel::onNoteChange,
         onSave = checkInViewModel::onSave
@@ -75,6 +77,7 @@ fun DailyCheckInScreen(
 fun DailyCheckInContent(
     state: DailyCheckInUiState,
     onBack: () -> Unit,
+    onGoToBreathing: () -> Unit,
     onMoodSelected: (Mood) -> Unit,
     onNoteChange: (String) -> Unit,
     onSave: () -> Unit
@@ -169,6 +172,26 @@ fun DailyCheckInContent(
                     Text("Te recomendamos", fontFamily = NunitoBold, fontSize = 14.sp, color = ZenLabel)
                     Spacer(Modifier.height(8.dp))
                     FlashcardCard(title = it.category, content = it.content, source = it.source)
+                }
+
+                val selectedMood = state.moods.firstOrNull { it.id == state.selectedMoodId }
+                if (selectedMood?.name == "Ansioso") {
+                    Spacer(Modifier.height(16.dp))
+                    Button(
+                        onClick = onGoToBreathing,
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = ZenSage),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp)
+                    ) {
+                        Text(
+                            "Hacer un ejercicio de respiración",
+                            fontFamily = ShortStack,
+                            fontSize = 15.sp,
+                            color = ZenIcon
+                        )
+                    }
                 }
             }
 

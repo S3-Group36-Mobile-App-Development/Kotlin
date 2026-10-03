@@ -386,6 +386,9 @@ fun ZenNavGraph() {
             DailyCheckInScreen(
                 onBack = {
                     navController.popBackStack()
+                },
+                onGoToBreathing = {
+                    navController.navigate(Routes.BREATHING)
                 }
             )
         }
