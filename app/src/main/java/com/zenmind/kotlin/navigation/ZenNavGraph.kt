@@ -348,6 +348,7 @@ fun ZenNavGraph() {
                 },
 
                 onContinueClick = {
+                    // throw RuntimeException("Test Crash") // forzar crash para probar Firebase Crashlytics
                     navController.navigate(Routes.DAILY_CHECKIN)
                 },
 
