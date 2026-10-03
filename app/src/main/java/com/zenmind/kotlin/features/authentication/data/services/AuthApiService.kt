@@ -1,6 +1,7 @@
 package com.zenmind.kotlin.features.authentication.data.services
 
 import com.zenmind.kotlin.features.authentication.data.models.AuthResponse
+import com.zenmind.kotlin.features.authentication.data.models.GoogleLoginRequest
 import com.zenmind.kotlin.features.authentication.data.models.LoginRequest
 import com.zenmind.kotlin.features.authentication.data.models.RegisterRequest
 import retrofit2.Response
@@ -22,6 +23,11 @@ interface AuthApiService {
     @POST("api/v1/auth/register")
     suspend fun register(
         @Body request: RegisterRequest
+    ): Response<AuthResponse>
+
+    @POST("api/v1/auth/google")
+    suspend fun loginWithGoogle(
+        @Body request: GoogleLoginRequest
     ): Response<AuthResponse>
 
     @POST("api/v1/auth/refresh")
