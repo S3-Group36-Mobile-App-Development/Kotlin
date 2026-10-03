@@ -1,6 +1,7 @@
 package com.zenmind.kotlin.features.authentication.presentation.views
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -9,13 +10,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -51,7 +55,8 @@ private val RegisterBorder = Color(0xFFB9AF94)
 fun RegisterScreen(
     viewModel: AuthViewModel,
     onBack: () -> Unit,
-    onRegisterSuccess: () -> Unit
+    onRegisterSuccess: () -> Unit,
+    onGoogleClick: () -> Unit
 ) {
     var name by rememberSaveable { mutableStateOf("") }
     var email by rememberSaveable { mutableStateOf("") }
@@ -92,6 +97,7 @@ fun RegisterScreen(
                 .fillMaxSize()
                 .background(RegisterBackground)
                 .padding(innerPadding)
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp)
         ) {
 
@@ -308,6 +314,30 @@ fun RegisterScreen(
                         }
                 )
             }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                HorizontalDivider(modifier = Modifier.weight(1f), color = RegisterBorder)
+                Text("o", modifier = Modifier.padding(horizontal = 12.dp), color = RegisterBrown)
+                HorizontalDivider(modifier = Modifier.weight(1f), color = RegisterBorder)
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            OutlinedButton(
+                onClick = onGoogleClick,
+                enabled = !isLoading,
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+                shape = RoundedCornerShape(24.dp)
+            ) {
+                Text("Continuar con Google")
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }

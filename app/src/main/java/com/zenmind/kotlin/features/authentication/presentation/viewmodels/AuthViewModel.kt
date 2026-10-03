@@ -4,6 +4,7 @@ import android.util.Patterns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zenmind.kotlin.features.authentication.data.repositories.AuthRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -86,6 +87,31 @@ class AuthViewModel(
                 _uiState.value = AuthUiState.Error(
                     message = exception.message
                         ?: "Ocurrió un error al iniciar sesión."
+                )
+            }
+        }
+    }
+
+    /** The credential picker is supplied by the UI, keeping Android context out of this ViewModel. */
+    fun loginWithGoogle(getIdToken: suspend () -> String?) {
+        if (_uiState.value is AuthUiState.Loading) return
+
+        viewModelScope.launch {
+            _uiState.value = AuthUiState.Loading
+            try {
+                val idToken = getIdToken()
+                if (idToken == null) {
+                    _uiState.value = AuthUiState.Idle
+                    return@launch
+                }
+
+                val response = authRepository.loginWithGoogle(idToken)
+                _uiState.value = AuthUiState.Success(user = response.usuario)
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (exception: Exception) {
+                _uiState.value = AuthUiState.Error(
+                    message = exception.message ?: "No se pudo continuar con Google."
                 )
             }
         }
