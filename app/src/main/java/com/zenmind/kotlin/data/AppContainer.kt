@@ -1,15 +1,37 @@
 package com.zenmind.kotlin.data
 
+import android.content.Context
+import com.zenmind.kotlin.core.network.ApiClient
+import com.zenmind.kotlin.core.storage.TokenStorage
+import com.zenmind.kotlin.features.dailycheckin.data.CheckInApiService
+import com.zenmind.kotlin.features.dailycheckin.data.DailyCheckInRepository
+import com.zenmind.kotlin.features.dailycheckin.data.NetworkDailyCheckInRepository
+import com.zenmind.kotlin.features.home.data.HomeApiService
 import com.zenmind.kotlin.features.home.data.HomeRepository
 import com.zenmind.kotlin.features.home.data.NetworkHomeRepository
 
-/** Contenedor de dependencias de la app (inyección manual). */
 interface AppContainer {
     val homeRepository: HomeRepository
+    val dailyCheckInRepository: DailyCheckInRepository
 }
 
-class DefaultAppContainer : AppContainer {
+class DefaultAppContainer(context: Context) : AppContainer {
+
+    private val tokenStorage = TokenStorage(context)
+
+    private val checkInApi: CheckInApiService by lazy {
+        ApiClient.retrofit.create(CheckInApiService::class.java)
+    }
+
+    private val homeApi: HomeApiService by lazy {
+        ApiClient.retrofit.create(HomeApiService::class.java)
+    }
+
     override val homeRepository: HomeRepository by lazy {
-        NetworkHomeRepository()
+        NetworkHomeRepository(homeApi, tokenStorage)
+    }
+
+    override val dailyCheckInRepository: DailyCheckInRepository by lazy {
+        NetworkDailyCheckInRepository(checkInApi, tokenStorage)
     }
 }
