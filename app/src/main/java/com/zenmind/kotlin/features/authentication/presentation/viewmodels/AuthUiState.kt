@@ -4,6 +4,8 @@ import com.zenmind.kotlin.features.authentication.data.models.UserDto
 
 sealed interface AuthUiState {
 
+    data object CheckingSession : AuthUiState
+
     data object Idle : AuthUiState
 
     data object Loading : AuthUiState

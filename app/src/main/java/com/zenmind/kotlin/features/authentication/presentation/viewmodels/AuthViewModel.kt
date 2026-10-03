@@ -14,10 +14,38 @@ class AuthViewModel(
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<AuthUiState>(
-        AuthUiState.Idle
+        AuthUiState.CheckingSession
     )
 
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
+
+    fun restoreSession() {
+
+        viewModelScope.launch {
+
+            _uiState.value = AuthUiState.CheckingSession
+
+            try {
+
+                val user = authRepository.restoreSession()
+
+                if (user != null) {
+
+                    _uiState.value = AuthUiState.Success(
+                        user = user
+                    )
+
+                } else {
+
+                    _uiState.value = AuthUiState.Idle
+                }
+
+            } catch (exception: Exception) {
+
+                _uiState.value = AuthUiState.Idle
+            }
+        }
+    }
 
     fun login(
         email: String,
@@ -30,7 +58,11 @@ class AuthViewModel(
         )
 
         if (validationError != null) {
-            _uiState.value = AuthUiState.Error(validationError)
+
+            _uiState.value = AuthUiState.Error(
+                message = validationError
+            )
+
             return
         }
 
@@ -72,7 +104,11 @@ class AuthViewModel(
         )
 
         if (validationError != null) {
-            _uiState.value = AuthUiState.Error(validationError)
+
+            _uiState.value = AuthUiState.Error(
+                message = validationError
+            )
+
             return
         }
 
@@ -148,10 +184,19 @@ class AuthViewModel(
             return "Ingresa un correo electrónico válido."
         }
 
+        if (password.isBlank()) {
+            return "Ingresa una contraseña."
+        }
+
         if (password.length < 8) {
             return "La contraseña debe tener al menos 8 caracteres."
         }
 
         return null
+    }
+
+    fun logout() {
+        authRepository.logout()
+        _uiState.value = AuthUiState.Idle
     }
 }
