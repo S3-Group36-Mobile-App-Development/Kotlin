@@ -57,18 +57,12 @@ fun ZenNavGraph() {
     val context = LocalContext.current
     val googleSignInService = remember { GoogleSignInService() }
 
-    /*
-     * Storage seguro para accessToken y refreshToken.
-     */
     val tokenStorage = remember {
         TokenStorage(
             context = context.applicationContext
         )
     }
 
-    /*
-     * Repository de autenticación.
-     */
     val authRepository = remember {
         AuthRepositoryImpl(
             authApiService = AuthServiceProvider.service,
@@ -76,29 +70,18 @@ fun ZenNavGraph() {
         )
     }
 
-    /*
-     * Factory del AuthViewModel.
-     */
     val authViewModelFactory = remember {
         AuthViewModelFactory(
             authRepository = authRepository
         )
     }
 
-    /*
-     * ViewModel compartido por todo el flujo
-     * de autenticación.
-     */
     val authViewModel: AuthViewModel = viewModel(
         factory = authViewModelFactory
     )
 
-    /*
-     * Estado actual de autenticación.
-     */
     val authState by authViewModel.uiState.collectAsState()
 
-    // Se registra cada pantalla que se abre (telemetría)
     val telemetry = (context.applicationContext as ZenMindApplication).container.telemetryRepository
     LaunchedEffect(navController) {
         navController.currentBackStackEntryFlow.collect { entry ->
@@ -106,10 +89,6 @@ fun ZenNavGraph() {
         }
     }
 
-    /*
-     * Al abrir la aplicación comprobamos
-     * si existe una sesión guardada.
-     */
     LaunchedEffect(Unit) {
         authViewModel.restoreSession()
     }
@@ -119,14 +98,6 @@ fun ZenNavGraph() {
         startDestination = Routes.AUTH_GATE
     ) {
 
-        /*
-         * =====================================================
-         * AUTH GATE
-         * =====================================================
-         *
-         * Decide si el usuario debe ir al Home
-         * o a la pantalla Welcome.
-         */
         composable(Routes.AUTH_GATE) {
 
             when (authState) {
@@ -186,11 +157,6 @@ fun ZenNavGraph() {
             }
         }
 
-        /*
-         * =====================================================
-         * WELCOME
-         * =====================================================
-         */
         composable(Routes.WELCOME) {
 
             WelcomeScreen(
@@ -211,10 +177,6 @@ fun ZenNavGraph() {
 
                 onGuestClick = {
 
-                    /*
-                     * Invitado:
-                     * entra al Home sin crear sesión.
-                     */
                     navController.navigate(
                         Routes.HOME
                     ) {
@@ -231,11 +193,6 @@ fun ZenNavGraph() {
             )
         }
 
-        /*
-         * =====================================================
-         * LOGIN
-         * =====================================================
-         */
         composable(Routes.LOGIN) {
 
             LoginScreen(
@@ -247,11 +204,6 @@ fun ZenNavGraph() {
 
                 onLoginSuccess = {
 
-                    /*
-                     * Login correcto:
-                     * eliminamos Welcome/Login del stack
-                     * y vamos al Home.
-                     */
                     navController.navigate(
                         Routes.HOME
                     ) {
@@ -273,11 +225,6 @@ fun ZenNavGraph() {
             )
         }
 
-        /*
-         * =====================================================
-         * REGISTER
-         * =====================================================
-         */
         composable(Routes.REGISTER) {
 
             RegisterScreen(
@@ -289,11 +236,6 @@ fun ZenNavGraph() {
 
                 onRegisterSuccess = {
 
-                    /*
-                     * Registro correcto:
-                     * el backend ya entregó los tokens
-                     * y AuthRepository los guardó.
-                     */
                     navController.navigate(
                         Routes.HOME
                     ) {
@@ -315,11 +257,6 @@ fun ZenNavGraph() {
             )
         }
 
-        /*
-         * =====================================================
-         * HOME
-         * =====================================================
-         */
         composable(Routes.HOME) {
 
             val homeViewModel: HomeViewModel = viewModel(
@@ -329,22 +266,10 @@ fun ZenNavGraph() {
             HomeScreen(
                 viewModel = homeViewModel,
 
-                /*
-                 * LOGOUT
-                 */
                 onLogoutClick = {
 
-                    /*
-                     * Elimina accessToken y refreshToken.
-                     */
                     authViewModel.logout()
 
-                    /*
-                     * Regresa a Welcome.
-                     *
-                     * Eliminamos Home del back stack
-                     * para impedir volver con el botón atrás.
-                     */
                     navController.navigate(
                         Routes.WELCOME
                     ) {
@@ -360,24 +285,20 @@ fun ZenNavGraph() {
                 },
 
                 onContinueClick = {
-                    // throw RuntimeException("Test Crash") // forzar crash para probar Firebase Crashlytics
+
                     navController.navigate(Routes.DAILY_CHECKIN)
                 },
 
-                /*
-                 * Navegación hacia funcionalidades
-                 * del Home.
-                 */
                 onFeatureClick = { feature ->
 
                     when (feature) {
 
                         HomeFeature.SUPPORT -> {
-                            // Pendiente de integración.
+
                         }
 
                         HomeFeature.PANIC -> {
-                            // Pendiente de integración.
+
                         }
 
                         HomeFeature.BREATHING -> {
@@ -388,15 +309,15 @@ fun ZenNavGraph() {
                         }
 
                         HomeFeature.PROTOCOLS -> {
-                            // Pendiente de integración.
+
                         }
 
                         HomeFeature.FLASHCARDS -> {
-                            // Pendiente de integración.
+
                         }
 
                         HomeFeature.GAMES -> {
-                            // Pendiente de integración.
+
                         }
                     }
                 }
@@ -415,11 +336,6 @@ fun ZenNavGraph() {
             )
         }
 
-        /*
-         * =====================================================
-         * BREATHING
-         * =====================================================
-         */
         composable(Routes.BREATHING) {
 
             BreathingSessionScreen(
@@ -429,13 +345,5 @@ fun ZenNavGraph() {
             )
         }
 
-        /*
-         * SUPPORT se puede integrar después
-         * cuando la pantalla esté disponible.
-         *
-         * composable(Routes.SUPPORT) {
-         *     SupportNetworkScreen(...)
-         * }
-         */
     }
 }
