@@ -33,14 +33,14 @@ private val Images = Color(0xFFFFF9E2)
 private val MatchaColor = Color(0xC0D17B)
 
 /**
- * Circulo guia de la respiracion, con tres aros apilados.
- * Dentro del circulo solido se muestra el numero de segundos y,
- * justo debajo, el nombre de la fase (Inhala/Sosten/Exhala).
+ * Circulo guia de la respiracion.
+ * Se muestra el numero de segundos y,
+ * el nombre de la fase (Inhala/Sosten/Exhala).
  *
  * @param phase fase actual (o null si no ha empezado).
- * @param phaseLabel texto de la fase para mostrar dentro del circulo.
+ * @param phaseLabel texto de la fase para mostrar.
  * @param phaseSeconds duracion de la fase, para que la animacion dure igual.
- * @param secondsLeft segundos restantes que se muestran dentro del circulo.
+ * @param secondsLeft segundos restantes.
  */
 @Composable
 fun BreathingCircle(

@@ -4,7 +4,7 @@ import com.zenmind.kotlin.features.breathing.model.BreathingPhase
 
 /**
  * En qué punto está la sesión de respiración.
- * - Idle: Aún no empieza (pantalla lista para arrancar).
+ * - Idle: Aún no empieza.
  * - Running: Sesión activa.
  * - Paused: Pausada por el usuario o por movimiento.
  * - Finished: Finalizada por el sistema.
