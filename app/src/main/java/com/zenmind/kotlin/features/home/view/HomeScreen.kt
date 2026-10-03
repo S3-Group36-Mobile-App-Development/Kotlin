@@ -35,16 +35,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.dropShadow
-import androidx.compose.ui.graphics.shadow.Shadow
-import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -56,6 +56,7 @@ import com.zenmind.kotlin.features.home.viewmodel.HomeViewModel
 import com.zenmind.kotlin.ui.components.ZenBottomBar
 import com.zenmind.kotlin.ui.components.ZenTab
 import com.zenmind.kotlin.ui.theme.Nunito
+import com.zenmind.kotlin.ui.theme.NunitoBold
 import com.zenmind.kotlin.ui.theme.ShortStack
 import com.zenmind.kotlin.ui.theme.ZenCream
 import com.zenmind.kotlin.ui.theme.ZenGreenLine
@@ -73,34 +74,60 @@ fun HomeScreen(
     onFeatureClick: (HomeFeature) -> Unit,
     onContinueClick: () -> Unit = {},
     onCallClick: () -> Unit = {},
-    onTabClick: (ZenTab) -> Unit = {}
+    onTabClick: (ZenTab) -> Unit = {},
+    onLogoutClick: () -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+
     when (val s = state) {
-        HomeUiState.Loading -> Box(Modifier.fillMaxSize().background(ZenCream))
-        is HomeUiState.Error -> HomeError(message = s.message, onRetry = viewModel::load)
-        is HomeUiState.Success -> HomeContent(
-            data = s.data,
-            onFeatureClick = onFeatureClick,
-            onContinueClick = onContinueClick,
-            onCallClick = onCallClick,
-            onTabClick = onTabClick
-        )
+
+        HomeUiState.Loading -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(ZenCream)
+            )
+        }
+
+        is HomeUiState.Error -> {
+            HomeError(
+                message = s.message,
+                onRetry = viewModel::load
+            )
+        }
+
+        is HomeUiState.Success -> {
+            HomeContent(
+                data = s.data,
+                onFeatureClick = onFeatureClick,
+                onContinueClick = onContinueClick,
+                onCallClick = onCallClick,
+                onTabClick = onTabClick,
+                onLogoutClick = onLogoutClick
+            )
+        }
     }
 }
 
-// UI sin estado
 @Composable
 fun HomeContent(
     data: HomeData,
     onFeatureClick: (HomeFeature) -> Unit,
     onContinueClick: () -> Unit = {},
     onCallClick: () -> Unit = {},
-    onTabClick: (ZenTab) -> Unit = {}
+    onTabClick: (ZenTab) -> Unit = {},
+    onLogoutClick: () -> Unit = {}
 ) {
     Scaffold(
         containerColor = ZenCream,
-        bottomBar = { ZenBottomBar(selected = ZenTab.HOME, onTabClick = onTabClick) },
+
+        bottomBar = {
+            ZenBottomBar(
+                selected = ZenTab.HOME,
+                onTabClick = onTabClick
+            )
+        },
+
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onCallClick,
@@ -108,99 +135,221 @@ fun HomeContent(
                 containerColor = ZenOrange,
                 contentColor = Color.White
             ) {
-                Icon(Icons.Outlined.Phone, contentDescription = "Llamar a tu contacto de apoyo")
+                Icon(
+                    imageVector = Icons.Outlined.Phone,
+                    contentDescription = "Llamar a tu contacto de apoyo"
+                )
             }
         }
     ) { innerPadding ->
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 4.dp),
+                .padding(
+                    horizontal = 24.dp,
+                    vertical = 4.dp
+                ),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            HomeHeader()
-            Spacer(Modifier.height(12.dp))
-            GreetingCard(userName = data.userName, onContinueClick = onContinueClick)
-            Spacer(Modifier.height(16.dp))
-            FeatureGrid(onFeatureClick = onFeatureClick)
-            Spacer(Modifier.height(80.dp))
+
+            HomeHeader(
+                onLogoutClick = onLogoutClick
+            )
+
+            Spacer(
+                modifier = Modifier.height(12.dp)
+            )
+
+            GreetingCard(
+                userName = data.userName,
+                onContinueClick = onContinueClick
+            )
+
+            Spacer(
+                modifier = Modifier.height(16.dp)
+            )
+
+            FeatureGrid(
+                onFeatureClick = onFeatureClick
+            )
+
+            Spacer(
+                modifier = Modifier.height(80.dp)
+            )
         }
     }
 }
 
 @Composable
-private fun HomeHeader() {
+private fun HomeHeader(
+    onLogoutClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier.fillMaxWidth()
+    ) {
 
-    Image(
-        painter = painterResource(R.drawable.zenmind_logo),
-        contentDescription = "ZenMind",
-        modifier = Modifier.width(160.dp)
-    )
-    Text(
-        text = "ZEN MIND",
-        fontFamily = ShortStack,
-        fontSize = 9.sp,
-        letterSpacing = 8.sp,
-        color = ZenOrange.copy(alpha = 0.6f)
-    )
+        Column(
+            modifier = Modifier.align(
+                Alignment.Center
+            ),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+
+            Image(
+                painter = painterResource(
+                    R.drawable.zenmind_logo
+                ),
+                contentDescription = "ZenMind",
+                modifier = Modifier.width(160.dp)
+            )
+
+            Text(
+                text = "ZEN MIND",
+                fontFamily = ShortStack,
+                fontSize = 9.sp,
+                letterSpacing = 8.sp,
+                color = ZenOrange.copy(
+                    alpha = 0.6f
+                )
+            )
+        }
+
+        Text(
+            text = "Cerrar sesión",
+            fontFamily = NunitoBold,
+            fontSize = 12.sp,
+            color = ZenOrange,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .clickable {
+                    onLogoutClick()
+                }
+                .padding(
+                    horizontal = 8.dp,
+                    vertical = 10.dp
+                )
+        )
+    }
 }
 
 @Composable
-private fun GreetingCard(userName: String?, onContinueClick: () -> Unit) {
+private fun GreetingCard(
+    userName: String?,
+    onContinueClick: () -> Unit
+) {
     val shape = RoundedCornerShape(12.dp)
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(4.dp, shape)
-            .background(ZenSageLight, shape)
-            .border(1.dp, ZenGreenLine, shape)
-            .padding(horizontal = 20.dp, vertical = 18.dp)
+            .shadow(
+                elevation = 4.dp,
+                shape = shape
+            )
+            .background(
+                color = ZenSageLight,
+                shape = shape
+            )
+            .border(
+                width = 1.dp,
+                color = ZenGreenLine,
+                shape = shape
+            )
+            .padding(
+                horizontal = 20.dp,
+                vertical = 18.dp
+            )
     ) {
+
         Text(
-            text = if (userName != null) "Hola, $userName ¿Cómo te sientes hoy?" else "Hola ¿Cómo te sientes hoy?",
+            text = if (userName != null) {
+                "Hola, $userName ¿Cómo te sientes hoy?"
+            } else {
+                "Hola ¿Cómo te sientes hoy?"
+            },
             fontFamily = ShortStack,
             fontSize = 16.sp,
             color = ZenText
         )
+
         Text(
             text = "Reconocer lo que sientes es el primer paso",
             fontFamily = Nunito,
             fontSize = 14.sp,
             color = ZenText
         )
-        Spacer(Modifier.height(14.dp))
+
+        Spacer(
+            modifier = Modifier.height(14.dp)
+        )
+
         val pill = RoundedCornerShape(50)
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(28.dp)
-                .shadow(2.dp, pill)
-                .background(ZenSage, pill)
-                .border(1.dp, ZenSageBorder, pill)
-                .clickable(onClick = onContinueClick),
+                .shadow(
+                    elevation = 2.dp,
+                    shape = pill
+                )
+                .background(
+                    color = ZenSage,
+                    shape = pill
+                )
+                .border(
+                    width = 1.dp,
+                    color = ZenSageBorder,
+                    shape = pill
+                )
+                .clickable(
+                    onClick = onContinueClick
+                ),
             contentAlignment = Alignment.Center
         ) {
-            Text("Continuar", fontFamily = ShortStack, fontSize = 14.sp, color = ZenText)
+
+            Text(
+                text = "Continuar",
+                fontFamily = ShortStack,
+                fontSize = 14.sp,
+                color = ZenText
+            )
         }
     }
 }
 
 @Composable
-private fun FeatureGrid(onFeatureClick: (HomeFeature) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
-        HomeFeature.entries.chunked(2).forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-                row.forEach { feature ->
-                    FeatureCard(
-                        feature = feature,
-                        onClick = onFeatureClick,
-                        modifier = Modifier.weight(1f)
-                    )
+private fun FeatureGrid(
+    onFeatureClick: (HomeFeature) -> Unit
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(
+            18.dp
+        )
+    ) {
+
+        HomeFeature.entries
+            .chunked(2)
+            .forEach { row ->
+
+                Row(
+                    horizontalArrangement =
+                        Arrangement.spacedBy(24.dp)
+                ) {
+
+                    row.forEach { feature ->
+
+                        FeatureCard(
+                            feature = feature,
+                            onClick = onFeatureClick,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             }
-        }
     }
 }
 
@@ -211,27 +360,53 @@ private fun FeatureCard(
     modifier: Modifier = Modifier
 ) {
     val shape = RoundedCornerShape(20.dp)
-    val borderColor = if (feature.warm) ZenOrange else ZenSageBorder
-    Box(modifier = modifier.aspectRatio(0.97f)) {
-        // Efecto shadow de la card (para que lo implementen en sus views) -> https://developer.android.com/develop/ui/compose/graphics/draw/shadows?hl=es-419
+
+    val borderColor =
+        if (feature.warm) {
+            ZenOrange
+        } else {
+            ZenSageBorder
+        }
+
+    Box(
+        modifier = modifier.aspectRatio(0.97f)
+    ) {
+
         Box(
-            Modifier
+            modifier = Modifier
                 .matchParentSize()
                 .padding(bottom = 4.dp)
                 .dropShadow(
                     shape = shape,
-                    shadow = Shadow(radius = 0.dp, color = ZenShadow, offset = DpOffset(0.dp, 4.dp))
+                    shadow = Shadow(
+                        radius = 0.dp,
+                        color = ZenShadow,
+                        offset = DpOffset(
+                            0.dp,
+                            4.dp
+                        )
+                    )
                 )
                 .clip(shape)
-                .border(2.dp, borderColor, shape)
-                .clickable { onClick(feature) }
+                .border(
+                    width = 2.dp,
+                    color = borderColor,
+                    shape = shape
+                )
+                .clickable {
+                    onClick(feature)
+                }
         ) {
+
             Image(
-                painter = painterResource(feature.imageRes()),
+                painter = painterResource(
+                    feature.imageRes()
+                ),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
+
             Text(
                 text = feature.label.uppercase(),
                 fontFamily = ShortStack,
@@ -240,60 +415,130 @@ private fun FeatureCard(
                 textAlign = TextAlign.Center,
                 color = ZenLabel,
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 12.dp)
-                    .dottedUnderline(ZenLabel)
+                    .align(
+                        Alignment.BottomCenter
+                    )
+                    .padding(
+                        bottom = 12.dp
+                    )
+                    .dottedUnderline(
+                        ZenLabel
+                    )
             )
         }
     }
 }
 
-private fun Modifier.dottedUnderline(color: Color) = drawBehind {
+private fun Modifier.dottedUnderline(
+    color: Color
+) = drawBehind {
+
     val y = size.height + 2.dp.toPx()
+
     drawLine(
         color = color,
-        start = Offset(0f, y),
-        end = Offset(size.width, y),
+        start = Offset(
+            x = 0f,
+            y = y
+        ),
+        end = Offset(
+            x = size.width,
+            y = y
+        ),
         strokeWidth = 1.dp.toPx(),
-        pathEffect = PathEffect.dashPathEffect(floatArrayOf(2f, 3f))
+        pathEffect = PathEffect.dashPathEffect(
+            floatArrayOf(
+                2f,
+                3f
+            )
+        )
     )
 }
 
 @DrawableRes
-private fun HomeFeature.imageRes(): Int = when (this) {
-    HomeFeature.PANIC -> R.drawable.panic_button
-    HomeFeature.BREATHING -> R.drawable.breathing_button
-    HomeFeature.SUPPORT -> R.drawable.support_button
-    HomeFeature.PROTOCOLS -> R.drawable.protocols_button
-    HomeFeature.FLASHCARDS -> R.drawable.flashcards_button
-    HomeFeature.GAMES -> R.drawable.games_button
+private fun HomeFeature.imageRes(): Int {
+
+    return when (this) {
+
+        HomeFeature.PANIC ->
+            R.drawable.panic_button
+
+        HomeFeature.BREATHING ->
+            R.drawable.breathing_button
+
+        HomeFeature.SUPPORT ->
+            R.drawable.support_button
+
+        HomeFeature.PROTOCOLS ->
+            R.drawable.protocols_button
+
+        HomeFeature.FLASHCARDS ->
+            R.drawable.flashcards_button
+
+        HomeFeature.GAMES ->
+            R.drawable.games_button
+    }
 }
 
 @Composable
-private fun HomeError(message: String, onRetry: () -> Unit) {
+private fun HomeError(
+    message: String,
+    onRetry: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(ZenCream)
             .padding(24.dp),
         verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment =
+            Alignment.CenterHorizontally
     ) {
-        Text("No pudimos conectarnos", fontFamily = ShortStack, fontSize = 18.sp, color = ZenText)
-        Text(message, fontFamily = Nunito, fontSize = 14.sp, color = ZenText)
-        Spacer(Modifier.height(16.dp))
+
+        Text(
+            text = "No pudimos conectarnos",
+            fontFamily = ShortStack,
+            fontSize = 18.sp,
+            color = ZenText
+        )
+
+        Text(
+            text = message,
+            fontFamily = Nunito,
+            fontSize = 14.sp,
+            color = ZenText
+        )
+
+        Spacer(
+            modifier = Modifier.height(16.dp)
+        )
+
         Button(
             onClick = onRetry,
-            colors = ButtonDefaults.buttonColors(containerColor = ZenOrange)
-        ) { Text("Reintentar") }
+            colors = ButtonDefaults.buttonColors(
+                containerColor = ZenOrange
+            )
+        ) {
+            Text(
+                text = "Reintentar"
+            )
+        }
     }
 }
 
-@Preview(showBackground = true, widthDp = 380, heightDp = 830)
+@Preview(
+    showBackground = true,
+    widthDp = 380,
+    heightDp = 830
+)
 @Composable
 private fun HomeContentPreview() {
+
     HomeContent(
-        data = HomeData(userName = "Leo"),
-        onFeatureClick = {}
+        data = HomeData(
+            userName = "Leo"
+        ),
+        onFeatureClick = {},
+        onLogoutClick = {}
     )
 }
