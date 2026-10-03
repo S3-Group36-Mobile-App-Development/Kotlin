@@ -12,17 +12,19 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import com.zenmind.kotlin.features.breathing.data.BreathingRepository
 
 /**
  * Recorre las fases (inhala/sosten/exhala) segundo a segundo y
  * repite el ejercicio durante la cantidad de ciclos indicada.
  *
- * Si recibe un sensor de movimiento, adapta la sesion: avisa que
+ * Si recibe un sensor de movimiento, adapta la sesion: Avisa que
  * apoye el telefono antes de empezar, o pausa si hay movimiento
  * sostenido durante la sesion.
  */
 class BreathingViewModel(
-    private val motionSource: AccelerometerMotionSource? = null
+    private val motionSource: AccelerometerMotionSource? = null,
+    private val repository: BreathingRepository? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BreathingUiState())
@@ -36,7 +38,7 @@ class BreathingViewModel(
         observeMotion()
     }
 
-    /** Escucha el sensor y reacciona segun el estado de la sesion. */
+    // Escucha el sensor y reacciona segun el estado de la sesion.
     private fun observeMotion() {
         val source = motionSource ?: return
         viewModelScope.launch {
@@ -57,7 +59,7 @@ class BreathingViewModel(
                             movementPauseJob?.cancel()
                         }
                     }
-                    else -> { /* Paused o Finished */ }
+                    else -> { }
                 }
             }
         }
@@ -97,6 +99,9 @@ class BreathingViewModel(
             }
             _uiState.update {
                 it.copy(status = SessionStatus.Finished, phase = null, secondsLeft = 0)
+            }
+            repository?.let { repo ->
+                launch { repo.guardarSesion(ejercicioId = 1) }
             }
         }
     }

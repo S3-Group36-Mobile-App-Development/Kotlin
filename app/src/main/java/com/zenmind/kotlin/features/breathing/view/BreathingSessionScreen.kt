@@ -114,8 +114,6 @@ fun BreathingSessionScreen(
                 fontWeight = FontWeight.SemiBold
             )
 
-            Spacer(Modifier.height(24.dp))
-
             Spacer(Modifier.height(32.dp))
 
             if (state.totalCycles > 0) {
@@ -212,9 +210,9 @@ fun BreathingSessionScreen(
                 Text(
                     text = "Escucha con calma",
                     color = TextBrown,
-                    fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
-                    fontSize = 14.sp
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
                 )
 
                 Text(

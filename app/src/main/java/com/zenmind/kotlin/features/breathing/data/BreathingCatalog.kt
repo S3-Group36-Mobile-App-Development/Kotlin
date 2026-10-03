@@ -20,6 +20,6 @@ object BreathingCatalog {
             BreathingStep(BreathingPhase.Exhale, 4),
             BreathingStep(BreathingPhase.Hold, 4)
         ),
-        cycles = 10
+        cycles = 5
     )
 }
