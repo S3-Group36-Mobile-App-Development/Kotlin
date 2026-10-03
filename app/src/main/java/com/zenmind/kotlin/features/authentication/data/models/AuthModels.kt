@@ -8,7 +8,8 @@ data class LoginRequest(
 data class RegisterRequest(
     val email: String,
     val password: String,
-    val nombreVisible: String
+    val nombreVisible: String,
+    val consentimientoDatos: Boolean
 )
 
 data class UserDto(

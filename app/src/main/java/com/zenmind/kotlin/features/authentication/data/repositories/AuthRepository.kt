@@ -13,7 +13,8 @@ interface AuthRepository {
     suspend fun register(
         email: String,
         password: String,
-        nombreVisible: String
+        nombreVisible: String,
+        consentimientoDatos: Boolean
     ): AuthResponse
 
     suspend fun restoreSession(): UserDto?

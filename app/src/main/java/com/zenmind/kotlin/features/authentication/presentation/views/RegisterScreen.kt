@@ -13,6 +13,8 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -55,6 +57,7 @@ fun RegisterScreen(
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
+    var acceptedDataConsent by rememberSaveable { mutableStateOf(false) }
 
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -232,7 +235,8 @@ fun RegisterScreen(
                             viewModel.register(
                                 name = name,
                                 email = email,
-                                password = password
+                                password = password,
+                                acceptedDataConsent = acceptedDataConsent
                             )
                         }
                     }
@@ -246,6 +250,33 @@ fun RegisterScreen(
             )
 
             Spacer(
+                modifier = Modifier.height(12.dp)
+            )
+
+            // Consentimiento de datos
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Checkbox(
+                    checked = acceptedDataConsent,
+                    onCheckedChange = {
+                        acceptedDataConsent = it
+                    },
+                    enabled = !isLoading,
+                    colors = CheckboxDefaults.colors(
+                        checkedColor = RegisterBrown,
+                        uncheckedColor = RegisterBorder
+                    )
+                )
+
+                Text(
+                    text = "Acepto el tratamiento de mis datos.",
+                    color = RegisterBrown,
+                    fontSize = 12.sp
+                )
+            }
+
+            Spacer(
                 modifier = Modifier.height(20.dp)
             )
 
@@ -254,7 +285,8 @@ fun RegisterScreen(
                     viewModel.register(
                         name = name,
                         email = email,
-                        password = password
+                        password = password,
+                        acceptedDataConsent = acceptedDataConsent
                     )
                 },
                 enabled = !isLoading,
