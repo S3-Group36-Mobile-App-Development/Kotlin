@@ -3,22 +3,15 @@ package com.zenmind.kotlin
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Surface
-import androidx.compose.ui.Modifier
-import com.zenmind.kotlin.features.breathing.view.BreathingSessionScreen
+import com.zenmind.kotlin.navigation.ZenNavGraph
 import com.zenmind.kotlin.ui.theme.ZenmindKotlinTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         setContent {
             ZenmindKotlinTheme {
-                Surface(modifier = Modifier.fillMaxSize()) {
-                    BreathingSessionScreen()
-                }
+                ZenNavGraph()
             }
         }
     }
