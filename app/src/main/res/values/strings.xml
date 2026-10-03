@@ -1,5 +1,5 @@
 <resources>
     <string name="app_name">Zenmind-Kotlin</string>
     <!-- Web OAuth client ID shared with the backend's GOOGLE_CLIENT_IDS. -->
-    <string name="google_web_client_id" translatable="false">912270390373-2ri10svem7im403uohpc4ivc0ja98ife.apps.googleusercontent.com</string>
+    <string name="google_web_client_id" translatable="false">840115292079-171rjs26acmt713cjvoe9pv15n3so6i5.apps.googleusercontent.com</string>
 </resources>
