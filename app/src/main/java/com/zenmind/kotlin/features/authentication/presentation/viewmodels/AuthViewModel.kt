@@ -94,13 +94,15 @@ class AuthViewModel(
     fun register(
         name: String,
         email: String,
-        password: String
+        password: String,
+        acceptedDataConsent: Boolean
     ) {
 
         val validationError = validateRegister(
             name = name,
             email = email,
-            password = password
+            password = password,
+            acceptedDataConsent = acceptedDataConsent
         )
 
         if (validationError != null) {
@@ -121,7 +123,8 @@ class AuthViewModel(
                 val response = authRepository.register(
                     email = email.trim(),
                     password = password,
-                    nombreVisible = name.trim()
+                    nombreVisible = name.trim(),
+                    consentimientoDatos = acceptedDataConsent
                 )
 
                 _uiState.value = AuthUiState.Success(
@@ -169,7 +172,8 @@ class AuthViewModel(
     private fun validateRegister(
         name: String,
         email: String,
-        password: String
+        password: String,
+        acceptedDataConsent: Boolean
     ): String? {
 
         if (name.trim().length < 2) {
@@ -190,6 +194,10 @@ class AuthViewModel(
 
         if (password.length < 8) {
             return "La contraseña debe tener al menos 8 caracteres."
+        }
+
+        if (!acceptedDataConsent) {
+            return "Debes aceptar el tratamiento de datos."
         }
 
         return null

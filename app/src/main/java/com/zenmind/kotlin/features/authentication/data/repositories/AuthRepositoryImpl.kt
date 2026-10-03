@@ -49,14 +49,16 @@ class AuthRepositoryImpl(
     override suspend fun register(
         email: String,
         password: String,
-        nombreVisible: String
+        nombreVisible: String,
+        consentimientoDatos: Boolean
     ): AuthResponse {
 
         val response = authApiService.register(
             RegisterRequest(
                 email = email,
                 password = password,
-                nombreVisible = nombreVisible
+                nombreVisible = nombreVisible,
+                consentimientoDatos = consentimientoDatos
             )
         )
 

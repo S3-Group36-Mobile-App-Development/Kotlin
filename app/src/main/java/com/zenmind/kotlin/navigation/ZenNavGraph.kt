@@ -26,6 +26,7 @@ import com.zenmind.kotlin.features.authentication.presentation.views.LoginScreen
 import com.zenmind.kotlin.features.authentication.presentation.views.RegisterScreen
 import com.zenmind.kotlin.features.authentication.presentation.views.WelcomeScreen
 import com.zenmind.kotlin.features.breathing.view.BreathingSessionScreen
+import com.zenmind.kotlin.features.dailycheckin.view.DailyCheckInScreen
 import com.zenmind.kotlin.features.home.model.HomeFeature
 import com.zenmind.kotlin.features.home.view.HomeScreen
 import com.zenmind.kotlin.features.home.viewmodel.HomeViewModel
@@ -41,6 +42,7 @@ object Routes {
     const val REGISTER = "register"
 
     const val HOME = "home"
+    const val DAILY_CHECKIN = "daily_checkin"
     const val SUPPORT = "support"
     const val BREATHING = "breathing"
 }
@@ -336,6 +338,10 @@ fun ZenNavGraph() {
                     }
                 },
 
+                onContinueClick = {
+                    navController.navigate(Routes.DAILY_CHECKIN)
+                },
+
                 /*
                  * Navegación hacia funcionalidades
                  * del Home.
@@ -375,6 +381,15 @@ fun ZenNavGraph() {
             )
         }
 
+        composable(Routes.DAILY_CHECKIN) {
+
+            DailyCheckInScreen(
+                onBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
         /*
          * =====================================================
          * BREATHING
@@ -382,7 +397,11 @@ fun ZenNavGraph() {
          */
         composable(Routes.BREATHING) {
 
-            BreathingSessionScreen()
+            BreathingSessionScreen(
+                onBack = {
+                    navController.popBackStack()
+                }
+            )
         }
 
         /*

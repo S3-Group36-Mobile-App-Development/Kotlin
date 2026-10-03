@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -33,6 +34,7 @@ import com.zenmind.kotlin.features.breathing.viewmodel.BreathingViewModel
 import com.zenmind.kotlin.features.breathing.viewmodel.SessionStatus
 import androidx.compose.ui.platform.LocalContext
 import com.zenmind.kotlin.features.breathing.viewmodel.BreathingViewModelFactory
+import com.zenmind.kotlin.ui.components.ZenTopBar
 
 private val Cream = Color(0xFFFFF9E2)
 private val TextBrown = Color(0xFF8A6F5B)
@@ -42,6 +44,7 @@ private val CardCream = Color(0xFFFEECD0)
 
 @Composable
 fun BreathingSessionScreen(
+    onBack: () -> Unit = {},
     viewModel: BreathingViewModel = viewModel(
         factory = BreathingViewModelFactory(LocalContext.current)
     )
@@ -57,21 +60,13 @@ fun BreathingSessionScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(24.dp),
+                .statusBarsPadding()
+                .padding(horizontal = 24.dp, vertical = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(Modifier.height(24.dp))
+            ZenTopBar(title = "Respiración", onBack = onBack)
 
-            Text(
-                text = "R E S P I R A C I O N   G U I A D A",
-                color = TextBrown,
-                fontSize = 17.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Start,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(20.dp))
 
             Text(
                 text = exercise.description,

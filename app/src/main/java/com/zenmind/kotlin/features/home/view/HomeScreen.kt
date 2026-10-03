@@ -1,6 +1,5 @@
 package com.zenmind.kotlin.features.home.view
 
-import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -33,17 +32,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.dropShadow
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -187,35 +181,10 @@ fun HomeContent(
 private fun HomeHeader(
     onLogoutClick: () -> Unit
 ) {
-    Box(
-        modifier = Modifier.fillMaxWidth()
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-
-        Column(
-            modifier = Modifier.align(
-                Alignment.Center
-            ),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-
-            Image(
-                painter = painterResource(
-                    R.drawable.zenmind_logo
-                ),
-                contentDescription = "ZenMind",
-                modifier = Modifier.width(160.dp)
-            )
-
-            Text(
-                text = "ZEN MIND",
-                fontFamily = ShortStack,
-                fontSize = 9.sp,
-                letterSpacing = 8.sp,
-                color = ZenOrange.copy(
-                    alpha = 0.6f
-                )
-            )
-        }
 
         Text(
             text = "Cerrar sesión",
@@ -223,14 +192,32 @@ private fun HomeHeader(
             fontSize = 12.sp,
             color = ZenOrange,
             modifier = Modifier
-                .align(Alignment.TopEnd)
+                .align(Alignment.End)
                 .clickable {
                     onLogoutClick()
                 }
                 .padding(
                     horizontal = 8.dp,
-                    vertical = 10.dp
+                    vertical = 6.dp
                 )
+        )
+
+        Image(
+            painter = painterResource(
+                R.drawable.zenmind_logo
+            ),
+            contentDescription = "ZenMind",
+            modifier = Modifier.width(160.dp)
+        )
+
+        Text(
+            text = "ZEN MIND",
+            fontFamily = ShortStack,
+            fontSize = 9.sp,
+            letterSpacing = 8.sp,
+            color = ZenOrange.copy(
+                alpha = 0.6f
+            )
         )
     }
 }
@@ -245,10 +232,6 @@ private fun GreetingCard(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
-                elevation = 4.dp,
-                shape = shape
-            )
             .background(
                 color = ZenSageLight,
                 shape = shape
@@ -292,10 +275,6 @@ private fun GreetingCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(28.dp)
-                .shadow(
-                    elevation = 2.dp,
-                    shape = pill
-                )
                 .background(
                     color = ZenSage,
                     shape = pill
@@ -400,7 +379,7 @@ private fun FeatureCard(
 
             Image(
                 painter = painterResource(
-                    feature.imageRes()
+                    feature.image
                 ),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
@@ -421,62 +400,8 @@ private fun FeatureCard(
                     .padding(
                         bottom = 12.dp
                     )
-                    .dottedUnderline(
-                        ZenLabel
-                    )
             )
         }
-    }
-}
-
-private fun Modifier.dottedUnderline(
-    color: Color
-) = drawBehind {
-
-    val y = size.height + 2.dp.toPx()
-
-    drawLine(
-        color = color,
-        start = Offset(
-            x = 0f,
-            y = y
-        ),
-        end = Offset(
-            x = size.width,
-            y = y
-        ),
-        strokeWidth = 1.dp.toPx(),
-        pathEffect = PathEffect.dashPathEffect(
-            floatArrayOf(
-                2f,
-                3f
-            )
-        )
-    )
-}
-
-@DrawableRes
-private fun HomeFeature.imageRes(): Int {
-
-    return when (this) {
-
-        HomeFeature.PANIC ->
-            R.drawable.panic_button
-
-        HomeFeature.BREATHING ->
-            R.drawable.breathing_button
-
-        HomeFeature.SUPPORT ->
-            R.drawable.support_button
-
-        HomeFeature.PROTOCOLS ->
-            R.drawable.protocols_button
-
-        HomeFeature.FLASHCARDS ->
-            R.drawable.flashcards_button
-
-        HomeFeature.GAMES ->
-            R.drawable.games_button
     }
 }
 
@@ -524,21 +449,4 @@ private fun HomeError(
             )
         }
     }
-}
-
-@Preview(
-    showBackground = true,
-    widthDp = 380,
-    heightDp = 830
-)
-@Composable
-private fun HomeContentPreview() {
-
-    HomeContent(
-        data = HomeData(
-            userName = "Leo"
-        ),
-        onFeatureClick = {},
-        onLogoutClick = {}
-    )
 }
