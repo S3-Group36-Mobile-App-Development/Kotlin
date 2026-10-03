@@ -8,6 +8,7 @@ import androidx.navigation.compose.rememberNavController
 import com.zenmind.kotlin.features.home.model.HomeFeature
 import com.zenmind.kotlin.features.home.view.HomeScreen
 import com.zenmind.kotlin.features.home.viewmodel.HomeViewModel
+import com.zenmind.kotlin.features.breathing.view.BreathingSessionScreen
 // import com.zenmind.kotlin.features.supportnetwork.view.SupportNetworkScreen
 import com.zenmind.kotlin.ui.components.ZenTab
 
@@ -15,6 +16,7 @@ import com.zenmind.kotlin.ui.components.ZenTab
 object Routes {
     const val HOME = "home"
     const val SUPPORT = "support"
+    const val BREATHING = "breathing"
 }
 
 // Navegación de la app con Navigation Compose
@@ -32,13 +34,16 @@ fun ZenNavGraph() {
                     when (feature) {
                         HomeFeature.SUPPORT -> {}//navController.navigate(Routes.SUPPORT)
                         HomeFeature.PANIC -> {}
-                        HomeFeature.BREATHING -> {}
+                        HomeFeature.BREATHING -> navController.navigate(Routes.BREATHING)
                         HomeFeature.PROTOCOLS -> {}
                         HomeFeature.FLASHCARDS -> {}
                         HomeFeature.GAMES -> {}
                     }
                 }
             )
+        }
+        composable(Routes.BREATHING) {
+            BreathingSessionScreen()
         }
 
         // composable(Routes.SUPPORT) {
