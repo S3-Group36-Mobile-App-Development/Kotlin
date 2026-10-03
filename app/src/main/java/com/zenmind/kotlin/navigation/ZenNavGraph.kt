@@ -19,6 +19,7 @@ import androidx.navigation.compose.rememberNavController
 import com.zenmind.kotlin.core.storage.TokenStorage
 import com.zenmind.kotlin.features.authentication.data.repositories.AuthRepositoryImpl
 import com.zenmind.kotlin.features.authentication.data.services.AuthServiceProvider
+import com.zenmind.kotlin.features.authentication.data.services.GoogleSignInService
 import com.zenmind.kotlin.features.authentication.presentation.viewmodels.AuthUiState
 import com.zenmind.kotlin.features.authentication.presentation.viewmodels.AuthViewModel
 import com.zenmind.kotlin.features.authentication.presentation.viewmodels.AuthViewModelFactory
@@ -53,6 +54,7 @@ fun ZenNavGraph() {
     val navController = rememberNavController()
 
     val context = LocalContext.current
+    val googleSignInService = remember { GoogleSignInService() }
 
     /*
      * Storage seguro para accessToken y refreshToken.
@@ -253,6 +255,11 @@ fun ZenNavGraph() {
 
                         launchSingleTop = true
                     }
+                },
+                onGoogleClick = {
+                    authViewModel.loginWithGoogle {
+                        googleSignInService.getIdToken(context)
+                    }
                 }
             )
         }
@@ -289,6 +296,11 @@ fun ZenNavGraph() {
                         }
 
                         launchSingleTop = true
+                    }
+                },
+                onGoogleClick = {
+                    authViewModel.loginWithGoogle {
+                        googleSignInService.getIdToken(context)
                     }
                 }
             )

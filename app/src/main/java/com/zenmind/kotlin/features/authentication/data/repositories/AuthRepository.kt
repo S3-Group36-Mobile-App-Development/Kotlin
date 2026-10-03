@@ -10,6 +10,8 @@ interface AuthRepository {
         password: String
     ): AuthResponse
 
+    suspend fun loginWithGoogle(idToken: String): AuthResponse
+
     suspend fun register(
         email: String,
         password: String,

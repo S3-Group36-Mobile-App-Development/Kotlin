@@ -1,6 +1,7 @@
 package com.zenmind.kotlin.features.authentication.presentation.views
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
@@ -53,7 +55,7 @@ fun LoginScreen(
     viewModel: AuthViewModel,
     onBack: () -> Unit,
     onLoginSuccess: () -> Unit,
-    onGoogleClick: (() -> Unit)? = null
+    onGoogleClick: () -> Unit
 ) {
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
@@ -96,6 +98,7 @@ fun LoginScreen(
                 .fillMaxSize()
                 .background(ZenMindBackground)
                 .padding(innerPadding)
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp)
         ) {
 
@@ -288,10 +291,8 @@ fun LoginScreen(
             )
 
             OutlinedButton(
-                onClick = {
-                    onGoogleClick?.invoke()
-                },
-                enabled = onGoogleClick != null && !isLoading,
+                onClick = onGoogleClick,
+                enabled = !isLoading,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp),
@@ -301,6 +302,8 @@ fun LoginScreen(
                     text = "Continuar con Google"
                 )
             }
+
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
