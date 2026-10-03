@@ -2,7 +2,9 @@ package com.zenmind.kotlin.features.breathing.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.zenmind.kotlin.features.breathing.data.AccelerometerMotionSource
 import com.zenmind.kotlin.features.breathing.model.BreathingExercise
+import com.zenmind.kotlin.features.breathing.model.MotionState
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,21 +14,64 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * Recorre las fases (inhala/sostén/exhala) segundo a segundo y
+ * Recorre las fases (inhala/sosten/exhala) segundo a segundo y
  * repite el ejercicio durante la cantidad de ciclos indicada.
  *
- * La vista solo observa 'uiState' y llama a start/pause/resume/finish.
+ * Si recibe un sensor de movimiento, adapta la sesion: avisa que
+ * apoye el telefono antes de empezar, o pausa si hay movimiento
+ * sostenido durante la sesion.
  */
-class BreathingViewModel : ViewModel() { //Se usa ViewModel porque se necesita persistencia
+class BreathingViewModel(
+    private val motionSource: AccelerometerMotionSource? = null
+) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(BreathingUiState()) // Editable
-    val uiState: StateFlow<BreathingUiState> = _uiState.asStateFlow() // Solo lectura
+    private val _uiState = MutableStateFlow(BreathingUiState())
+    val uiState: StateFlow<BreathingUiState> = _uiState.asStateFlow()
 
-    // El ejercicio actual y la corutina (gestión tareas en segundo plano) que lleva el tiempo.
     private var exercise: BreathingExercise? = null
     private var timerJob: Job? = null
+    private var movementPauseJob: Job? = null
 
-    /** Arranca una sesión nueva con el ejercicio dado. */
+    init {
+        observeMotion()
+    }
+
+    /** Escucha el sensor y reacciona segun el estado de la sesion. */
+    private fun observeMotion() {
+        val source = motionSource ?: return
+        viewModelScope.launch {
+            source.motion().collect { motion ->
+                when (_uiState.value.status) {
+                    SessionStatus.Idle -> {
+                        _uiState.update {
+                            it.copy(
+                                message = if (motion == MotionState.Moving)
+                                    "Apoya el telefono o sientate" else null
+                            )
+                        }
+                    }
+                    SessionStatus.Running -> {
+                        if (motion == MotionState.Moving) {
+                            scheduleMovementPause()
+                        } else {
+                            movementPauseJob?.cancel()
+                        }
+                    }
+                    else -> { /* Paused o Finished */ }
+                }
+            }
+        }
+    }
+
+    /** Si el movimiento dura 3 segundos seguidos, pausa la sesion. */
+    private fun scheduleMovementPause() {
+        if (movementPauseJob?.isActive == true) return
+        movementPauseJob = viewModelScope.launch {
+            delay(3000)
+            pause("Movimiento detectado, sesion pausada")
+        }
+    }
+
     fun start(exercise: BreathingExercise) {
         this.exercise = exercise
         timerJob?.cancel()
@@ -37,7 +82,6 @@ class BreathingViewModel : ViewModel() { //Se usa ViewModel porque se necesita p
         runSession()
     }
 
-    /** Lanza la corutina que recorre ciclos y fases. */
     private fun runSession() {
         val ex = exercise ?: return
         timerJob = viewModelScope.launch {
@@ -51,38 +95,27 @@ class BreathingViewModel : ViewModel() { //Se usa ViewModel porque se necesita p
                     }
                 }
             }
-            // Terminaron todos los ciclos.
             _uiState.update {
                 it.copy(status = SessionStatus.Finished, phase = null, secondsLeft = 0)
             }
         }
     }
 
-    /** Pausa la sesión y recuerda el conteo. */
     fun pause(message: String? = null) {
-        if (_uiState.value.status != SessionStatus.Running) {
-            return
-        }
+        if (_uiState.value.status != SessionStatus.Running) return
         timerJob?.cancel()
-        _uiState.update {
-            it.copy(status = SessionStatus.Paused, message = message)
-        }
+        _uiState.update { it.copy(status = SessionStatus.Paused, message = message) }
     }
 
-    /** Reanudar. */
     fun resume() {
-        if (_uiState.value.status != SessionStatus.Paused) {
-            return
-        }
-        _uiState.update {
-            it.copy(status = SessionStatus.Running, message = null)
-        }
+        if (_uiState.value.status != SessionStatus.Paused) return
+        _uiState.update { it.copy(status = SessionStatus.Running, message = null) }
         runSession()
     }
 
-    /** Termina la sesión manualmente. */
     fun finish() {
         timerJob?.cancel()
+        movementPauseJob?.cancel()
         _uiState.update {
             it.copy(status = SessionStatus.Finished, phase = null, secondsLeft = 0, message = null)
         }
@@ -90,6 +123,7 @@ class BreathingViewModel : ViewModel() { //Se usa ViewModel porque se necesita p
 
     override fun onCleared() {
         timerJob?.cancel()
+        movementPauseJob?.cancel()
         super.onCleared()
     }
 }

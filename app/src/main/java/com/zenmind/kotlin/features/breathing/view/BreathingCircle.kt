@@ -20,12 +20,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zenmind.kotlin.features.breathing.model.BreathingPhase
+import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.ContentScale
+import com.zenmind.kotlin.R
+import androidx.compose.animation.animateColorAsState
 
 private val TextBrown = Color(0xFF8A6F5B)
 private val CirclePeach = Color(0xFFDCA278)
+private val Images = Color(0xFFFFF9E2)
+private val MatchaColor = Color(0xC0D17B)
 
 /**
- * Circulo guia de la respiracion, con tres aros concentricos.
+ * Circulo guia de la respiracion, con tres aros apilados.
  * Dentro del circulo solido se muestra el numero de segundos y,
  * justo debajo, el nombre de la fase (Inhala/Sosten/Exhala).
  *
@@ -48,55 +56,84 @@ fun BreathingCircle(
         null -> 0.8f
     }
 
+    val targetColor = when (phase) {
+        BreathingPhase.Inhale -> MatchaColor
+        BreathingPhase.Hold -> MatchaColor
+        BreathingPhase.Exhale -> CirclePeach
+        null -> CirclePeach
+    }
+
     val scale by animateFloatAsState(
         targetValue = targetScale,
         animationSpec = tween(durationMillis = phaseSeconds.coerceAtLeast(1) * 1000),
         label = "breathing-scale"
     )
 
+    val colorAnimate by animateColorAsState(
+        targetValue = targetColor,
+        animationSpec = tween(durationMillis = phaseSeconds.coerceAtLeast(1) * 1000),
+        label = "breathing-color"
+    )
+
     Box(contentAlignment = Alignment.Center) {
-        // Aro exterior muy tenue.
+        // Aro exterior.
+        Box(
+            modifier = Modifier
+                .size(340.dp)
+                .scale(scale)
+                .clip(CircleShape)
+                .background(colorAnimate.copy(alpha = 0.15f))
+        )
+        // Aro medio.
         Box(
             modifier = Modifier
                 .size(300.dp)
                 .scale(scale)
                 .clip(CircleShape)
-                .background(CirclePeach.copy(alpha = 0.15f))
+                .background(colorAnimate.copy(alpha = 0.3f))
         )
-        // Aro medio.
+        // Circulo solido central.
         Box(
             modifier = Modifier
                 .size(260.dp)
                 .scale(scale)
                 .clip(CircleShape)
-                .background(CirclePeach.copy(alpha = 0.3f))
-        )
-        // Circulo solido central con el numero y el label debajo.
-        Box(
-            modifier = Modifier
-                .size(220.dp)
-                .scale(scale)
-                .clip(CircleShape)
-                .background(CirclePeach),
+                .background(colorAnimate),
             contentAlignment = Alignment.Center
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                Text(
-                    text = if (secondsLeft > 0) "${secondsLeft}s" else "",
-                    color = TextBrown,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Medium
-                )
-                if (phaseLabel.isNotEmpty()) {
-                    Text(
-                        text = phaseLabel,
-                        color = TextBrown,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                when (phase){
+                    BreathingPhase.Inhale -> {
+                        Image(
+                            painter = painterResource(id = R.drawable.inhale),
+                            contentDescription = "Nube de respiracion",
+                            colorFilter = ColorFilter.tint(Images),
+                            modifier = Modifier.size(200.dp),
+                            contentScale = ContentScale.Fit
+                        )
+                    }
+                    BreathingPhase.Exhale -> {
+                        Image(
+                            painter = painterResource(id = R.drawable.exhale),
+                            contentDescription = "Nube de respiracion",
+                            colorFilter = ColorFilter.tint(Images),
+                            modifier = Modifier.size(200.dp),
+                            contentScale = ContentScale.Fit
+                        )
+                    }
+                    BreathingPhase.Hold -> {
+                        Image(
+                            painter = painterResource(id = R.drawable.hold),
+                            contentDescription = "Nube de respiracion",
+                            colorFilter = ColorFilter.tint(Images),
+                            modifier = Modifier.size(200.dp),
+                            contentScale = ContentScale.Fit
+                        )
+                    }
+                    null -> {}
                 }
             }
         }

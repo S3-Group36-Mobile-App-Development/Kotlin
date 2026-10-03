@@ -31,6 +31,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.zenmind.kotlin.features.breathing.data.BreathingCatalog
 import com.zenmind.kotlin.features.breathing.viewmodel.BreathingViewModel
 import com.zenmind.kotlin.features.breathing.viewmodel.SessionStatus
+import androidx.compose.ui.platform.LocalContext
+import com.zenmind.kotlin.features.breathing.viewmodel.BreathingViewModelFactory
 
 private val Cream = Color(0xFFFFF9E2)
 private val TextBrown = Color(0xFF8A6F5B)
@@ -40,7 +42,9 @@ private val CardCream = Color(0xFFFEECD0)
 
 @Composable
 fun BreathingSessionScreen(
-    viewModel: BreathingViewModel = viewModel()
+    viewModel: BreathingViewModel = viewModel(
+        factory = BreathingViewModelFactory(LocalContext.current)
+    )
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val exercise = BreathingCatalog.default()
@@ -89,6 +93,28 @@ fun BreathingSessionScreen(
                 phaseSeconds = state.secondsLeft.coerceAtLeast(1),
                 secondsLeft = state.secondsLeft
             )
+
+            Spacer(Modifier.height(48.dp))
+
+            Text(
+                text = if (state.secondsLeft > 0) "${state.secondsLeft}s" else "",
+                color = TextBrown,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Medium
+            )
+
+            Text(
+                text = when (state.status) {
+                    SessionStatus.Idle -> "Listo para empezar"
+                    SessionStatus.Finished -> "Sesion completada"
+                    else -> state.phase?.label ?: ""
+                },
+                color = TextBrown,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Spacer(Modifier.height(24.dp))
 
             Spacer(Modifier.height(32.dp))
 
