@@ -16,6 +16,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.zenmind.kotlin.ZenMindApplication
 import com.zenmind.kotlin.core.storage.TokenStorage
 import com.zenmind.kotlin.features.authentication.data.repositories.AuthRepositoryImpl
 import com.zenmind.kotlin.features.authentication.data.services.AuthServiceProvider
@@ -96,6 +97,14 @@ fun ZenNavGraph() {
      * Estado actual de autenticación.
      */
     val authState by authViewModel.uiState.collectAsState()
+
+    // Se registra cada pantalla que se abre (telemetría)
+    val telemetry = (context.applicationContext as ZenMindApplication).container.telemetryRepository
+    LaunchedEffect(navController) {
+        navController.currentBackStackEntryFlow.collect { entry ->
+            entry.destination.route?.let { telemetry.screenView(it) }
+        }
+    }
 
     /*
      * Al abrir la aplicación comprobamos
@@ -351,6 +360,7 @@ fun ZenNavGraph() {
                 },
 
                 onContinueClick = {
+                    // throw RuntimeException("Test Crash") // forzar crash para probar Firebase Crashlytics
                     navController.navigate(Routes.DAILY_CHECKIN)
                 },
 
