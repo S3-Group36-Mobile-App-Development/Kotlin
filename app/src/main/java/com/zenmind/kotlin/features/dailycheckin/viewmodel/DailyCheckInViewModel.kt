@@ -33,11 +33,9 @@ class DailyCheckInViewModel(
         _uiState.update { it.copy(isLoading = true) }
         viewModelScope.launch {
             try {
-                // Primero la racha: pide sesión, así si no hay login no se carga nada más
                 val streak = repository.getStreak()
                 val moods = repository.getMoods()
                 val todayMood = repository.getTodayCheckInMood()
-                // SMART FEATURE: si ya hizo el check-in hoy, se muestra la flashcard de ese mood
                 val flashcard = todayMood?.let { repository.getRecommendedFlashcard(it) }
                 _uiState.update {
                     it.copy(
@@ -47,7 +45,7 @@ class DailyCheckInViewModel(
                         alreadyCheckedInToday = todayMood != null,
                         selectedMoodId = todayMood?.id,
                         recommendedFlashcard = flashcard,
-                        message = if (todayMood != null) "Ya registraste tu check-in de hoy. ¡Vuelve mañana!" else null
+                        message = null
                     )
                 }
             } catch (e: NotLoggedInException) {
@@ -58,12 +56,21 @@ class DailyCheckInViewModel(
         }
     }
 
+    // Tocar el mismo mood otra vez lo deselecciona
     fun onMoodSelected(mood: Mood) {
-        _uiState.update { it.copy(selectedMoodId = mood.id) }
+        _uiState.update {
+            it.copy(selectedMoodId = if (it.selectedMoodId == mood.id) null else mood.id)
+        }
     }
 
+    // La vista ya mostró el Snackbar
+    fun onSavedMessageShown() {
+        _uiState.update { it.copy(justSaved = false) }
+    }
+
+    // Límite de caracteres (validación de UX; la protección real está en el backend)
     fun onNoteChange(note: String) {
-        _uiState.update { it.copy(note = note) }
+        _uiState.update { it.copy(note = note.take(MAX_NOTE_LENGTH)) }
     }
 
     fun onSave() {
@@ -76,11 +83,16 @@ class DailyCheckInViewModel(
             var saved = false
 
             try {
-                repository.saveCheckIn(mood.id, state.note.ifBlank { null })
+                repository.saveCheckIn(mood.id, state.note.trim().ifBlank { null })
                 saved = true
-                _uiState.update { it.copy(isSaving = false, alreadyCheckedInToday = true, message = "¡Check-in guardado!") }
+                // Pasa a la vista de resultado; la card llega después
+                _uiState.update {
+                    it.copy(isSaving = false, alreadyCheckedInToday = true, isLoadingCard = true, justSaved = true, message = null)
+                }
             } catch (e: AlreadyCheckedInException) {
-                _uiState.update { it.copy(isSaving = false, alreadyCheckedInToday = true, message = e.message) }
+                // Ya había uno hoy (quizá con otro mood): se recarga para mostrar el real
+                _uiState.update { it.copy(isSaving = false) }
+                load()
             } catch (e: Exception) {
                 _uiState.update { it.copy(isSaving = false, message = "No se pudo guardar. Intenta de nuevo.") }
             }
@@ -88,16 +100,18 @@ class DailyCheckInViewModel(
             if (saved) {
                 try {
                     val streak = repository.getStreak()
-                    // SMART FEATURE: flashcard recomendada según el mood que acaba de elegir
                     val flashcard = repository.getRecommendedFlashcard(mood)
-                    _uiState.update { it.copy(streak = streak, recommendedFlashcard = flashcard) }
+                    _uiState.update { it.copy(streak = streak, recommendedFlashcard = flashcard, isLoadingCard = false) }
                 } catch (e: Exception) {
+                    _uiState.update { it.copy(isLoadingCard = false) }
                 }
             }
         }
     }
 
     companion object {
+        const val MAX_NOTE_LENGTH = 1000
+
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val application = (this[APPLICATION_KEY] as ZenMindApplication)

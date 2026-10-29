@@ -3,18 +3,11 @@ package com.zenmind.kotlin.ui.components
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ThumbDown
-import androidx.compose.material.icons.outlined.ThumbUp
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -29,7 +22,6 @@ import com.zenmind.kotlin.ui.theme.Nunito
 import com.zenmind.kotlin.ui.theme.NunitoBold
 import com.zenmind.kotlin.ui.theme.ShortStack
 import com.zenmind.kotlin.ui.theme.ZenFlashcard
-import com.zenmind.kotlin.ui.theme.ZenIcon
 import com.zenmind.kotlin.ui.theme.ZenLabel
 import com.zenmind.kotlin.ui.theme.ZenOrange
 import com.zenmind.kotlin.ui.theme.ZenShadow
@@ -73,18 +65,17 @@ fun FlashcardCard(
             textAlign = TextAlign.Start,
             modifier = Modifier.fillMaxWidth()
         )
-        Spacer(Modifier.height(32.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(Icons.Outlined.ThumbDown, contentDescription = null, tint = ZenIcon, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(12.dp))
-            Icon(Icons.Outlined.ThumbUp, contentDescription = null, tint = ZenIcon, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.weight(1f))
-            source?.let {
-                Text(it, fontFamily = NunitoBold, fontSize = 13.sp, color = ZenText)
-            }
+        source?.let {
+            Spacer(Modifier.height(16.dp))
+            Text(
+                it,
+                fontFamily = NunitoBold,
+                fontSize = 13.sp,
+                color = ZenText,
+                textAlign = TextAlign.End,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
+        Spacer(Modifier.height(16.dp))
     }
 }
