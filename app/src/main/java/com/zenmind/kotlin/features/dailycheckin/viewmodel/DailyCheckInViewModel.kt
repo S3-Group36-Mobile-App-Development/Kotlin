@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.zenmind.kotlin.ZenMindApplication
+import com.zenmind.kotlin.core.telemetry.TelemetryRepository
 import com.zenmind.kotlin.features.dailycheckin.data.AlreadyCheckedInException
 import com.zenmind.kotlin.features.dailycheckin.data.DailyCheckInRepository
 import com.zenmind.kotlin.features.dailycheckin.data.NotLoggedInException
@@ -19,26 +20,31 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class DailyCheckInViewModel(
-    private val repository: DailyCheckInRepository
+    private val repository: DailyCheckInRepository,
+    private val telemetry: TelemetryRepository? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DailyCheckInUiState())
     val uiState: StateFlow<DailyCheckInUiState> = _uiState.asStateFlow()
 
     init {
+        track("abierto")
         load()
+    }
+
+    private fun track(action: String, extra: Map<String, String> = emptyMap()) {
+        telemetry?.featureUse(SCREEN, mapOf("accion" to action) + extra)
     }
 
     fun load() {
         _uiState.update { it.copy(isLoading = true) }
         viewModelScope.launch {
             try {
-                // Primero la racha: pide sesión, así si no hay login no se carga nada más
                 val streak = repository.getStreak()
                 val moods = repository.getMoods()
                 val todayMood = repository.getTodayCheckInMood()
-                // SMART FEATURE: si ya hizo el check-in hoy, se muestra la flashcard de ese mood
                 val flashcard = todayMood?.let { repository.getRecommendedFlashcard(it) }
+                if (todayMood != null) track("ya_registrado", mapOf("mood" to todayMood.name))
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -47,7 +53,7 @@ class DailyCheckInViewModel(
                         alreadyCheckedInToday = todayMood != null,
                         selectedMoodId = todayMood?.id,
                         recommendedFlashcard = flashcard,
-                        message = if (todayMood != null) "Ya registraste tu check-in de hoy. ¡Vuelve mañana!" else null
+                        message = null
                     )
                 }
             } catch (e: NotLoggedInException) {
@@ -59,11 +65,17 @@ class DailyCheckInViewModel(
     }
 
     fun onMoodSelected(mood: Mood) {
-        _uiState.update { it.copy(selectedMoodId = mood.id) }
+        _uiState.update {
+            it.copy(selectedMoodId = if (it.selectedMoodId == mood.id) null else mood.id)
+        }
+    }
+
+    fun onSavedMessageShown() {
+        _uiState.update { it.copy(justSaved = false) }
     }
 
     fun onNoteChange(note: String) {
-        _uiState.update { it.copy(note = note) }
+        _uiState.update { it.copy(note = note.take(MAX_NOTE_LENGTH)) }
     }
 
     fun onSave() {
@@ -76,11 +88,15 @@ class DailyCheckInViewModel(
             var saved = false
 
             try {
-                repository.saveCheckIn(mood.id, state.note.ifBlank { null })
+                repository.saveCheckIn(mood.id, state.note.trim().ifBlank { null })
                 saved = true
-                _uiState.update { it.copy(isSaving = false, alreadyCheckedInToday = true, message = "¡Check-in guardado!") }
+                track("guardado", mapOf("mood" to mood.name, "con_nota" to state.note.isNotBlank().toString()))
+                _uiState.update {
+                    it.copy(isSaving = false, alreadyCheckedInToday = true, isLoadingCard = true, justSaved = true, message = null)
+                }
             } catch (e: AlreadyCheckedInException) {
-                _uiState.update { it.copy(isSaving = false, alreadyCheckedInToday = true, message = e.message) }
+                _uiState.update { it.copy(isSaving = false) }
+                load()
             } catch (e: Exception) {
                 _uiState.update { it.copy(isSaving = false, message = "No se pudo guardar. Intenta de nuevo.") }
             }
@@ -88,20 +104,30 @@ class DailyCheckInViewModel(
             if (saved) {
                 try {
                     val streak = repository.getStreak()
-                    // SMART FEATURE: flashcard recomendada según el mood que acaba de elegir
+                    track(
+                        "racha",
+                        mapOf("racha_actual" to streak.current.toString(), "mejor_racha" to streak.longest.toString())
+                    )
                     val flashcard = repository.getRecommendedFlashcard(mood)
-                    _uiState.update { it.copy(streak = streak, recommendedFlashcard = flashcard) }
+                    _uiState.update { it.copy(streak = streak, recommendedFlashcard = flashcard, isLoadingCard = false) }
                 } catch (e: Exception) {
+                    _uiState.update { it.copy(isLoadingCard = false) }
                 }
             }
         }
     }
 
     companion object {
+        const val MAX_NOTE_LENGTH = 1000
+        private const val SCREEN = "checkin"
+
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val application = (this[APPLICATION_KEY] as ZenMindApplication)
-                DailyCheckInViewModel(repository = application.container.dailyCheckInRepository)
+                DailyCheckInViewModel(
+                    repository = application.container.dailyCheckInRepository,
+                    telemetry = application.container.telemetryRepository
+                )
             }
         }
     }

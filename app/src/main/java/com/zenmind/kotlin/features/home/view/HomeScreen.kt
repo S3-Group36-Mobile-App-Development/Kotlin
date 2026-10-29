@@ -1,11 +1,13 @@
 package com.zenmind.kotlin.features.home.view
 
+import android.content.res.Configuration
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,11 +20,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.outlined.Phone
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
@@ -36,6 +42,8 @@ import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpOffset
@@ -79,8 +87,11 @@ fun HomeScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(ZenCream)
-            )
+                    .background(ZenCream),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = ZenOrange)
+            }
         }
 
         is HomeUiState.Error -> {
@@ -157,9 +168,8 @@ fun HomeContent(
                 modifier = Modifier.height(12.dp)
             )
 
-            GreetingCard(
-                userName = data.userName,
-                onContinueClick = onContinueClick
+            CheckInCard(
+                onClick = onContinueClick
             )
 
             Spacer(
@@ -223,80 +233,58 @@ private fun HomeHeader(
 }
 
 @Composable
-private fun GreetingCard(
-    userName: String?,
-    onContinueClick: () -> Unit
+private fun CheckInCard(
+    onClick: () -> Unit
 ) {
     val shape = RoundedCornerShape(12.dp)
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(
-                color = ZenSageLight,
-                shape = shape
-            )
+            .clip(shape)
+            .background(ZenSageLight)
             .border(
                 width = 1.dp,
                 color = ZenGreenLine,
                 shape = shape
             )
+            .clickable(onClick = onClick)
             .padding(
                 horizontal = 20.dp,
                 vertical = 18.dp
             )
     ) {
 
-        Text(
-            text = if (userName != null) {
-                "Hola, $userName ¿Cómo te sientes hoy?"
-            } else {
-                "Hola ¿Cómo te sientes hoy?"
-            },
-            fontFamily = ShortStack,
-            fontSize = 16.sp,
-            color = ZenText
-        )
-
-        Text(
-            text = "Reconocer lo que sientes es el primer paso",
-            fontFamily = Nunito,
-            fontSize = 14.sp,
-            color = ZenText
-        )
-
-        Spacer(
-            modifier = Modifier.height(14.dp)
-        )
-
-        val pill = RoundedCornerShape(50)
-
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(28.dp)
-                .background(
-                    color = ZenSage,
-                    shape = pill
-                )
-                .border(
-                    width = 1.dp,
-                    color = ZenSageBorder,
-                    shape = pill
-                )
-                .clickable(
-                    onClick = onContinueClick
-                ),
-            contentAlignment = Alignment.Center
+                .padding(end = 32.dp)
         ) {
+            Text(
+                text = "C H E C K - I N",
+                fontFamily = ShortStack,
+                fontSize = 16.sp,
+                color = ZenText
+            )
+
+            Spacer(
+                modifier = Modifier.height(4.dp)
+            )
 
             Text(
-                text = "Continuar",
-                fontFamily = ShortStack,
+                text = "¿Cómo te sientes hoy? Recibe tu card diaria.",
+                fontFamily = Nunito,
                 fontSize = 14.sp,
                 color = ZenText
             )
         }
+
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+            contentDescription = "Ir al check-in",
+            tint = ZenText,
+            modifier = Modifier.align(Alignment.CenterEnd)
+        )
     }
 }
 
@@ -304,33 +292,45 @@ private fun GreetingCard(
 private fun FeatureGrid(
     onFeatureClick: (HomeFeature) -> Unit
 ) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(
-            18.dp
-        )
+    val isLandscape =
+        LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val columns = if (isLandscape) 3 else 2
+    val spacing = 24.dp
+
+    BoxWithConstraints(
+        modifier = Modifier.fillMaxWidth(),
+        contentAlignment = Alignment.TopCenter
     ) {
+        val fitWidth = (maxWidth - spacing * (columns - 1)) / columns
+        val cardWidth = if (isLandscape) {
+            minOf(FEATURE_CARD_MAX_WIDTH_LANDSCAPE, fitWidth)
+        } else {
+            minOf(FEATURE_CARD_WIDTH, fitWidth)
+        }
 
-        HomeFeature.entries
-            .chunked(2)
-            .forEach { row ->
-
-                Row(
-                    horizontalArrangement =
-                        Arrangement.spacedBy(24.dp)
-                ) {
-
-                    row.forEach { feature ->
-
-                        FeatureCard(
-                            feature = feature,
-                            onClick = onFeatureClick,
-                            modifier = Modifier.weight(1f)
-                        )
+        Column(
+            verticalArrangement = Arrangement.spacedBy(18.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            HomeFeature.entries
+                .chunked(columns)
+                .forEach { row ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(spacing)) {
+                        row.forEach { feature ->
+                            FeatureCard(
+                                feature = feature,
+                                onClick = onFeatureClick,
+                                modifier = Modifier.width(cardWidth)
+                            )
+                        }
                     }
                 }
-            }
+        }
     }
 }
+
+private val FEATURE_CARD_WIDTH = 140.dp
+private val FEATURE_CARD_MAX_WIDTH_LANDSCAPE = 200.dp
 
 @Composable
 private fun FeatureCard(
@@ -386,20 +386,19 @@ private fun FeatureCard(
                 modifier = Modifier.fillMaxSize()
             )
 
-            Text(
+            BasicText(
                 text = feature.label.uppercase(),
-                fontFamily = ShortStack,
-                fontSize = 12.sp,
-                letterSpacing = 4.sp,
-                textAlign = TextAlign.Center,
-                color = ZenLabel,
+                style = TextStyle(
+                    fontFamily = ShortStack,
+                    letterSpacing = 4.sp,
+                    textAlign = TextAlign.Center,
+                    color = ZenLabel
+                ),
+                maxLines = 1,
+                autoSize = TextAutoSize.StepBased(minFontSize = 8.sp, maxFontSize = 12.sp),
                 modifier = Modifier
-                    .align(
-                        Alignment.BottomCenter
-                    )
-                    .padding(
-                        bottom = 12.dp
-                    )
+                    .align(Alignment.BottomCenter)
+                    .padding(start = 8.dp, end = 8.dp, bottom = 12.dp)
             )
         }
     }
