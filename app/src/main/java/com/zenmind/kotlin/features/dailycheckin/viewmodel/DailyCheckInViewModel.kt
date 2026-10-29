@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.zenmind.kotlin.ZenMindApplication
+import com.zenmind.kotlin.core.telemetry.TelemetryRepository
 import com.zenmind.kotlin.features.dailycheckin.data.AlreadyCheckedInException
 import com.zenmind.kotlin.features.dailycheckin.data.DailyCheckInRepository
 import com.zenmind.kotlin.features.dailycheckin.data.NotLoggedInException
@@ -19,14 +20,20 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class DailyCheckInViewModel(
-    private val repository: DailyCheckInRepository
+    private val repository: DailyCheckInRepository,
+    private val telemetry: TelemetryRepository? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DailyCheckInUiState())
     val uiState: StateFlow<DailyCheckInUiState> = _uiState.asStateFlow()
 
     init {
+        track("abierto")
         load()
+    }
+
+    private fun track(action: String, extra: Map<String, String> = emptyMap()) {
+        telemetry?.featureUse(SCREEN, mapOf("accion" to action) + extra)
     }
 
     fun load() {
@@ -37,6 +44,7 @@ class DailyCheckInViewModel(
                 val moods = repository.getMoods()
                 val todayMood = repository.getTodayCheckInMood()
                 val flashcard = todayMood?.let { repository.getRecommendedFlashcard(it) }
+                if (todayMood != null) track("ya_registrado", mapOf("mood" to todayMood.name))
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -56,19 +64,16 @@ class DailyCheckInViewModel(
         }
     }
 
-    // Tocar el mismo mood otra vez lo deselecciona
     fun onMoodSelected(mood: Mood) {
         _uiState.update {
             it.copy(selectedMoodId = if (it.selectedMoodId == mood.id) null else mood.id)
         }
     }
 
-    // La vista ya mostró el Snackbar
     fun onSavedMessageShown() {
         _uiState.update { it.copy(justSaved = false) }
     }
 
-    // Límite de caracteres (validación de UX; la protección real está en el backend)
     fun onNoteChange(note: String) {
         _uiState.update { it.copy(note = note.take(MAX_NOTE_LENGTH)) }
     }
@@ -85,12 +90,11 @@ class DailyCheckInViewModel(
             try {
                 repository.saveCheckIn(mood.id, state.note.trim().ifBlank { null })
                 saved = true
-                // Pasa a la vista de resultado; la card llega después
+                track("guardado", mapOf("mood" to mood.name, "con_nota" to state.note.isNotBlank().toString()))
                 _uiState.update {
                     it.copy(isSaving = false, alreadyCheckedInToday = true, isLoadingCard = true, justSaved = true, message = null)
                 }
             } catch (e: AlreadyCheckedInException) {
-                // Ya había uno hoy (quizá con otro mood): se recarga para mostrar el real
                 _uiState.update { it.copy(isSaving = false) }
                 load()
             } catch (e: Exception) {
@@ -100,6 +104,10 @@ class DailyCheckInViewModel(
             if (saved) {
                 try {
                     val streak = repository.getStreak()
+                    track(
+                        "racha",
+                        mapOf("racha_actual" to streak.current.toString(), "mejor_racha" to streak.longest.toString())
+                    )
                     val flashcard = repository.getRecommendedFlashcard(mood)
                     _uiState.update { it.copy(streak = streak, recommendedFlashcard = flashcard, isLoadingCard = false) }
                 } catch (e: Exception) {
@@ -111,11 +119,15 @@ class DailyCheckInViewModel(
 
     companion object {
         const val MAX_NOTE_LENGTH = 1000
+        private const val SCREEN = "checkin"
 
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val application = (this[APPLICATION_KEY] as ZenMindApplication)
-                DailyCheckInViewModel(repository = application.container.dailyCheckInRepository)
+                DailyCheckInViewModel(
+                    repository = application.container.dailyCheckInRepository,
+                    telemetry = application.container.telemetryRepository
+                )
             }
         }
     }

@@ -79,7 +79,6 @@ fun DailyCheckInScreen(
     val state by checkInViewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Mismo patrón que Registro: Snackbar y luego se reinicia el estado
     LaunchedEffect(state.justSaved) {
         if (state.justSaved) {
             snackbarHostState.showSnackbar("Check-in guardado")
@@ -141,7 +140,6 @@ fun DailyCheckInContent(
                 CircularProgressIndicator(color = ZenOrange)
             }
         } else if (state.alreadyCheckedInToday) {
-            // Ya hizo el check-in: solo el resultado (sin formulario ni botón de guardar)
             CheckInResult(state = state, onGoToBreathing = onGoToBreathing)
         } else {
             CheckInForm(
@@ -154,7 +152,6 @@ fun DailyCheckInContent(
     }
 }
 
-// Formulario: mood + nota + guardar
 @Composable
 private fun CheckInForm(
     state: DailyCheckInUiState,
@@ -213,7 +210,6 @@ private fun CheckInForm(
                     )
                 },
                 shape = RoundedCornerShape(16.dp),
-                // Colores fijos: así no dependen del modo oscuro ni de dynamicColor
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = ZenText,
                     unfocusedTextColor = ZenText,
@@ -269,7 +265,6 @@ private fun CheckInForm(
     }
 }
 
-// Resultado: mood registrado + racha + card de hoy (sin formulario ni botón de guardar)
 @Composable
 private fun CheckInResult(
     state: DailyCheckInUiState,
@@ -333,7 +328,6 @@ private fun CheckInResult(
                     .fillMaxWidth()
                     .heightIn(min = 52.dp)
             ) {
-                // Una sola línea: la letra se reduce si no cabe
                 BasicText(
                     text = "Hacer un ejercicio de respiración",
                     style = TextStyle(fontFamily = ShortStack, color = ZenIcon, textAlign = TextAlign.Center),
@@ -377,7 +371,6 @@ private fun MoodChip(
     }
 }
 
-// Racha: "Días seguidos | Tu mejor marca" con los números en círculos
 @Composable
 private fun StreakPanel(streak: Streak) {
     Row(
@@ -416,7 +409,6 @@ private fun StreakItem(label: String, days: Int, modifier: Modifier = Modifier) 
     }
 }
 
-// Mood registrado: emoji y nombre, solo informativo
 @Composable
 private fun MoodBadge(mood: Mood) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {

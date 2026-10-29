@@ -12,5 +12,5 @@ data class DailyCheckInUiState(
     val message: String? = null,
     val recommendedFlashcard: Flashcard? = null,
     val isLoadingCard: Boolean = false,
-    val justSaved: Boolean = false // dispara el Snackbar "Check-in guardado"
+    val justSaved: Boolean = false
 )

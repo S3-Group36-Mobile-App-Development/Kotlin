@@ -22,4 +22,15 @@ class TelemetryRepository(
             }
         }
     }
+
+    fun featureUse(screen: String, metadata: Map<String, String>) {
+        externalScope.launch {
+            try {
+                api.sendEvent(
+                    TelemetryEvent(tipoEvento = "uso_funcionalidad", nombrePantalla = screen, metadata = metadata)
+                )
+            } catch (e: Exception) {
+            }
+        }
+    }
 }
