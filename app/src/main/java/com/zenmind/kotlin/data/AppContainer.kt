@@ -2,6 +2,7 @@ package com.zenmind.kotlin.data
 
 import android.content.Context
 import kotlinx.coroutines.CoroutineScope
+import com.zenmind.kotlin.core.database.AppDatabase
 import com.zenmind.kotlin.core.network.ApiClient
 import com.zenmind.kotlin.core.storage.TokenStorage
 import com.zenmind.kotlin.core.telemetry.TelemetryApiService
@@ -27,6 +28,10 @@ class DefaultAppContainer(
 
     private val tokenStorage = TokenStorage(context)
 
+    private val database: AppDatabase by lazy {
+        AppDatabase.getInstance(context)
+    }
+
     private val checkInApi: CheckInApiService by lazy {
         ApiClient.retrofit.create(CheckInApiService::class.java)
     }
@@ -44,7 +49,7 @@ class DefaultAppContainer(
     }
 
     override val dailyCheckInRepository: DailyCheckInRepository by lazy {
-        NetworkDailyCheckInRepository(checkInApi, tokenStorage, flashcardsCache)
+        NetworkDailyCheckInRepository(checkInApi, tokenStorage, flashcardsCache, database.getCheckinDao())
     }
 
     override val telemetryRepository: TelemetryRepository by lazy {

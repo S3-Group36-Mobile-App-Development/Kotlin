@@ -2,6 +2,7 @@ package com.zenmind.kotlin.features.dailycheckin.data
 
 import android.util.Log
 import com.zenmind.kotlin.core.storage.TokenStorage
+import com.zenmind.kotlin.features.dailycheckin.data.db.CheckinDao
 import com.zenmind.kotlin.features.dailycheckin.model.Flashcard
 import com.zenmind.kotlin.features.dailycheckin.model.Mood
 import com.zenmind.kotlin.features.dailycheckin.model.Streak
@@ -26,7 +27,8 @@ class NotLoggedInException : Exception("Inicia sesión para hacer tu check-in.")
 class NetworkDailyCheckInRepository(
     private val api: CheckInApiService,
     private val tokenStorage: TokenStorage,
-    private val flashcardsCache: FlashcardsCache
+    private val flashcardsCache: FlashcardsCache,
+    private val checkinDao: CheckinDao
 ) : DailyCheckInRepository {
     private fun auth(): String {
         val token = tokenStorage.getAccessToken() ?: throw NotLoggedInException()
