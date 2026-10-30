@@ -1,5 +1,6 @@
 package com.zenmind.kotlin.features.dailycheckin.data
 
+import android.util.Log
 import com.zenmind.kotlin.core.storage.TokenStorage
 import com.zenmind.kotlin.features.dailycheckin.model.Flashcard
 import com.zenmind.kotlin.features.dailycheckin.model.Mood
@@ -15,7 +16,6 @@ interface DailyCheckInRepository {
     suspend fun getStreak(): Streak
     suspend fun getTodayCheckInMood(): Mood?
     suspend fun saveCheckIn(moodId: Long, note: String?)
-    // SMART FEATURE: recomienda una flashcard según el mood elegido
     suspend fun getRecommendedFlashcard(mood: Mood): Flashcard?
 }
 
@@ -27,8 +27,6 @@ class NetworkDailyCheckInRepository(
     private val api: CheckInApiService,
     private val tokenStorage: TokenStorage
 ) : DailyCheckInRepository {
-
-    // Header "Bearer <token>" con el token que guardó el login
     private fun auth(): String {
         val token = tokenStorage.getAccessToken() ?: throw NotLoggedInException()
         return "Bearer $token"
@@ -42,7 +40,6 @@ class NetworkDailyCheckInRepository(
         return Streak(racha?.rachaActualDias ?: 0, racha?.rachaMasLargaDias ?: 0)
     }
 
-    // El back cuenta un check-in por día
     override suspend fun getTodayCheckInMood(): Mood? {
         val utc = SimpleDateFormat("yyyy-MM-dd", Locale.US)
         utc.timeZone = TimeZone.getTimeZone("UTC")
@@ -58,14 +55,27 @@ class NetworkDailyCheckInRepository(
         if (!response.isSuccessful) throw IOException("HTTP ${response.code()}")
     }
 
-    // SMART FEATURE: mood -> categoría de flashcard y GET flashcards?categoria=
     override suspend fun getRecommendedFlashcard(mood: Mood): Flashcard? {
         val category = when (mood.name) {
             "Ansioso" -> "Ansiedad"
             "Estresado" -> "Estrés"
-            else -> null // faltan flashcards para otros moods
+            else -> return null
         }
-        if (category == null) return null
-        return api.getFlashcards(category).firstOrNull()?.let { Flashcard(it.categoria, it.contenido) }
+        return try {
+            var flashcards = FlashcardsCache.getFlashcards(category)
+            if (flashcards == null){
+                //Log.d("TEST", "Fetching from Network")
+                flashcards = api.getFlashcards(category).map { Flashcard(it.categoria, it.contenido)  }
+                if (flashcards.isNotEmpty()){
+                    FlashcardsCache.saveFlashcards(category, flashcards)
+                }
+            } //else {
+                //Log.d("TEST", "Fetching from the cache")
+            //}
+            flashcards.firstOrNull()
+        } catch (e: Exception){
+            e.printStackTrace()
+            null
+        }
     }
 }
