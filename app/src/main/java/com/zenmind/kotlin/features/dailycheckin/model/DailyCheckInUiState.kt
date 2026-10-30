@@ -12,5 +12,5 @@ data class DailyCheckInUiState(
     val message: String? = null,
     val recommendedFlashcard: Flashcard? = null,
     val isLoadingCard: Boolean = false,
-    val justSaved: Boolean = false
+    val savedMessage: String? = null
 )

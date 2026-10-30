@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import com.zenmind.kotlin.features.dailycheckin.data.db.CheckinDao
 import com.zenmind.kotlin.features.dailycheckin.data.db.CheckinEntity
 
-@Database(entities = [CheckinEntity::class], version = 1, exportSchema = false)
+@Database(entities = [CheckinEntity::class], version = 2, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun getCheckinDao(): CheckinDao
@@ -20,7 +20,9 @@ abstract class AppDatabase : RoomDatabase() {
             if (instance == null) {
                 synchronized(this) {
                     if (instance == null) {
-                        instance = Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "zenmind_db").build()
+                        instance = Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "zenmind_db")
+                            .fallbackToDestructiveMigration(true)
+                            .build()
                     }
                 }
             }

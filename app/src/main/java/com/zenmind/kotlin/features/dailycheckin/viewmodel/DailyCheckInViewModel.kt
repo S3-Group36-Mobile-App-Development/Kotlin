@@ -8,11 +8,11 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.zenmind.kotlin.ZenMindApplication
 import com.zenmind.kotlin.core.telemetry.TelemetryRepository
-import com.zenmind.kotlin.features.dailycheckin.data.AlreadyCheckedInException
 import com.zenmind.kotlin.features.dailycheckin.data.DailyCheckInRepository
 import com.zenmind.kotlin.features.dailycheckin.data.NotLoggedInException
 import com.zenmind.kotlin.features.dailycheckin.model.DailyCheckInUiState
 import com.zenmind.kotlin.features.dailycheckin.model.Mood
+import com.zenmind.kotlin.features.dailycheckin.model.SaveResult
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -71,7 +71,7 @@ class DailyCheckInViewModel(
     }
 
     fun onSavedMessageShown() {
-        _uiState.update { it.copy(justSaved = false) }
+        _uiState.update { it.copy(savedMessage = null) }
     }
 
     fun onNoteChange(note: String) {
@@ -88,15 +88,33 @@ class DailyCheckInViewModel(
             var saved = false
 
             try {
-                repository.saveCheckIn(mood.id, state.note.trim().ifBlank { null })
-                saved = true
-                track("guardado", mapOf("mood" to mood.name, "con_nota" to state.note.isNotBlank().toString()))
-                _uiState.update {
-                    it.copy(isSaving = false, alreadyCheckedInToday = true, isLoadingCard = true, justSaved = true, message = null)
+                val result = repository.saveCheckIn(mood, state.note.trim().ifBlank { null })
+
+                val message = when (result) {
+                    SaveResult.SYNCED -> "Check-in guardado."
+                    SaveResult.PENDING -> "Check-in guardado en el teléfono. Se enviará cuando vuelvas a tener conexión."
+                    SaveResult.GUEST -> "Check-in guardado solo en el teléfono como invitado."
+                    SaveResult.ALREADY_REGISTERED -> "Ya ingresaste tu Check-in de hoy."
                 }
-            } catch (e: AlreadyCheckedInException) {
-                _uiState.update { it.copy(isSaving = false) }
-                load()
+
+                if (result == SaveResult.ALREADY_REGISTERED) {
+                    _uiState.update { it.copy(isSaving = false, savedMessage = message) }
+                    load()
+                    return@launch
+                }
+
+                saved = true
+                track(
+                    "guardado",
+                    mapOf(
+                        "mood" to mood.name,
+                        "con_nota" to state.note.isNotBlank().toString(),
+                        "resultado" to result.name.lowercase()
+                    )
+                )
+                _uiState.update {
+                    it.copy(isSaving = false, alreadyCheckedInToday = true, isLoadingCard = true, savedMessage = message, message = null)
+                }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isSaving = false, message = "No se pudo guardar. Intenta de nuevo.") }
             }

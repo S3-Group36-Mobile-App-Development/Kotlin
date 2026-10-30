@@ -79,9 +79,9 @@ fun DailyCheckInScreen(
     val state by checkInViewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(state.justSaved) {
-        if (state.justSaved) {
-            snackbarHostState.showSnackbar("Check-in guardado")
+    LaunchedEffect(state.savedMessage) {
+        state.savedMessage?.let {
+            snackbarHostState.showSnackbar(it)
             checkInViewModel.onSavedMessageShown()
         }
     }
