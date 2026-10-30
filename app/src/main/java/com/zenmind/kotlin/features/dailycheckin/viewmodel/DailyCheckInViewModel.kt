@@ -7,9 +7,9 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.zenmind.kotlin.ZenMindApplication
+import com.zenmind.kotlin.core.network.ConnectivityObserver
 import com.zenmind.kotlin.core.telemetry.TelemetryRepository
 import com.zenmind.kotlin.features.dailycheckin.data.DailyCheckInRepository
-import com.zenmind.kotlin.features.dailycheckin.data.NotLoggedInException
 import com.zenmind.kotlin.features.dailycheckin.model.DailyCheckInUiState
 import com.zenmind.kotlin.features.dailycheckin.model.Mood
 import com.zenmind.kotlin.features.dailycheckin.model.SaveResult
@@ -21,7 +21,8 @@ import kotlinx.coroutines.launch
 
 class DailyCheckInViewModel(
     private val repository: DailyCheckInRepository,
-    private val telemetry: TelemetryRepository? = null
+    private val telemetry: TelemetryRepository? = null,
+    private val connectivity: ConnectivityObserver? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DailyCheckInUiState())
@@ -30,34 +31,59 @@ class DailyCheckInViewModel(
     init {
         track("abierto")
         load()
+        observeConnectivity()
+    }
+
+    private fun observeConnectivity() {
+        val observer = connectivity ?: return
+        viewModelScope.launch {
+            var wasOnline: Boolean? = null
+            observer.onlineFlow.collect { online ->
+                if (!repository.isGuest()) {
+                    _uiState.update { it.copy(isOffline = !online) }
+                }
+                if (online && wasOnline == false) {
+                    load(showSpinner = false)
+                }
+                wasOnline = online
+            }
+        }
     }
 
     private fun track(action: String, extra: Map<String, String> = emptyMap()) {
         telemetry?.featureUse(SCREEN, mapOf("accion" to action) + extra)
     }
 
-    fun load() {
-        _uiState.update { it.copy(isLoading = true) }
+    fun load(showSpinner: Boolean = true) {
+        if (showSpinner) _uiState.update { it.copy(isLoading = true) }
         viewModelScope.launch {
             try {
-                val streak = repository.getStreak()
+                val guest = repository.isGuest()
+                val synced = repository.syncPending()
+                if (synced > 0) track("sincronizado", mapOf("cantidad" to synced.toString()))
+
                 val moods = repository.getMoods()
                 val todayMood = repository.getTodayCheckInMood()
+                val pending = repository.isTodayPending()
+                val streak = repository.getStreak()
                 val flashcard = todayMood?.let { repository.getRecommendedFlashcard(it) }
                 if (todayMood != null) track("ya_registrado", mapOf("mood" to todayMood.name))
+
                 _uiState.update {
                     it.copy(
                         isLoading = false,
+                        isGuest = guest,
+                        isOffline = if (guest) false else if (connectivity != null) it.isOffline else streak == null,
+                        pendingSync = pending,
                         moods = moods,
-                        streak = streak,
+                        streak = streak ?: it.streak,
                         alreadyCheckedInToday = todayMood != null,
                         selectedMoodId = todayMood?.id,
                         recommendedFlashcard = flashcard,
-                        message = null
+                        savedMessage = if (synced > 0) "Tu check-in pendiente se sincronizó." else it.savedMessage,
+                        message = if (moods.isEmpty()) "Conéctate a internet una vez para cargar los estados de ánimo." else null
                     )
                 }
-            } catch (e: NotLoggedInException) {
-                _uiState.update { it.copy(isLoading = false, notLoggedIn = true) }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, message = "No se pudo cargar el check-in.") }
             }
@@ -113,23 +139,34 @@ class DailyCheckInViewModel(
                     )
                 )
                 _uiState.update {
-                    it.copy(isSaving = false, alreadyCheckedInToday = true, isLoadingCard = true, savedMessage = message, message = null)
+                    it.copy(
+                        isSaving = false,
+                        alreadyCheckedInToday = true,
+                        pendingSync = result == SaveResult.PENDING,
+                        isLoadingCard = true,
+                        savedMessage = message,
+                        message = null
+                    )
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isSaving = false, message = "No se pudo guardar. Intenta de nuevo.") }
             }
 
             if (saved) {
-                try {
-                    val streak = repository.getStreak()
+                val streak = repository.getStreak()
+                if (streak != null) {
                     track(
                         "racha",
                         mapOf("racha_actual" to streak.current.toString(), "mejor_racha" to streak.longest.toString())
                     )
-                    val flashcard = repository.getRecommendedFlashcard(mood)
-                    _uiState.update { it.copy(streak = streak, recommendedFlashcard = flashcard, isLoadingCard = false) }
-                } catch (e: Exception) {
-                    _uiState.update { it.copy(isLoadingCard = false) }
+                }
+                val flashcard = repository.getRecommendedFlashcard(mood)
+                _uiState.update {
+                    it.copy(
+                        streak = streak ?: it.streak,
+                        recommendedFlashcard = flashcard,
+                        isLoadingCard = false
+                    )
                 }
             }
         }
@@ -144,7 +181,8 @@ class DailyCheckInViewModel(
                 val application = (this[APPLICATION_KEY] as ZenMindApplication)
                 DailyCheckInViewModel(
                     repository = application.container.dailyCheckInRepository,
-                    telemetry = application.container.telemetryRepository
+                    telemetry = application.container.telemetryRepository,
+                    connectivity = application.container.connectivityObserver
                 )
             }
         }

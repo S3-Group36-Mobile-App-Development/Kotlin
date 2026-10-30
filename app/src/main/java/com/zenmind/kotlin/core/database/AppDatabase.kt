@@ -6,11 +6,14 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.zenmind.kotlin.features.dailycheckin.data.db.CheckinDao
 import com.zenmind.kotlin.features.dailycheckin.data.db.CheckinEntity
+import com.zenmind.kotlin.features.dailycheckin.data.db.MoodDao
+import com.zenmind.kotlin.features.dailycheckin.data.db.MoodEntity
 
-@Database(entities = [CheckinEntity::class], version = 2, exportSchema = false)
+@Database(entities = [CheckinEntity::class, MoodEntity::class], version = 3, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun getCheckinDao(): CheckinDao
+    abstract fun getMoodDao(): MoodDao
 
     companion object {
         @Volatile

@@ -2,7 +2,9 @@ package com.zenmind.kotlin.features.dailycheckin.model
 
 data class DailyCheckInUiState(
     val isLoading: Boolean = false,
-    val notLoggedIn: Boolean = false,
+    val isGuest: Boolean = false,
+    val isOffline: Boolean = false,
+    val pendingSync: Boolean = false,
     val moods: List<Mood> = emptyList(),
     val selectedMoodId: Long? = null,
     val note: String = "",
