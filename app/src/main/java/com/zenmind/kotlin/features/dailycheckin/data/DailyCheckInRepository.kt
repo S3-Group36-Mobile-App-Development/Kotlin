@@ -25,7 +25,8 @@ class NotLoggedInException : Exception("Inicia sesión para hacer tu check-in.")
 
 class NetworkDailyCheckInRepository(
     private val api: CheckInApiService,
-    private val tokenStorage: TokenStorage
+    private val tokenStorage: TokenStorage,
+    private val flashcardsCache: FlashcardsCache
 ) : DailyCheckInRepository {
     private fun auth(): String {
         val token = tokenStorage.getAccessToken() ?: throw NotLoggedInException()
@@ -62,12 +63,12 @@ class NetworkDailyCheckInRepository(
             else -> return null
         }
         return try {
-            var flashcards = FlashcardsCache.getFlashcards(category)
+            var flashcards = flashcardsCache.getFlashcards(category)
             if (flashcards == null){
                 Log.d("FlashcardsCache", "Fetching from Network")
                 flashcards = api.getFlashcards(category).map { Flashcard(it.categoria, it.contenido)  }
                 if (flashcards.isNotEmpty()){
-                    FlashcardsCache.saveFlashcards(category, flashcards)
+                    flashcardsCache.saveFlashcards(category, flashcards)
                 }
             } else {
                 Log.d("FlashcardsCache", "Fetching from the cache")

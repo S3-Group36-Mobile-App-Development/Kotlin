@@ -8,6 +8,7 @@ import com.zenmind.kotlin.core.telemetry.TelemetryApiService
 import com.zenmind.kotlin.core.telemetry.TelemetryRepository
 import com.zenmind.kotlin.features.dailycheckin.data.CheckInApiService
 import com.zenmind.kotlin.features.dailycheckin.data.DailyCheckInRepository
+import com.zenmind.kotlin.features.dailycheckin.data.FlashcardsCache
 import com.zenmind.kotlin.features.dailycheckin.data.NetworkDailyCheckInRepository
 import com.zenmind.kotlin.features.home.data.HomeApiService
 import com.zenmind.kotlin.features.home.data.HomeRepository
@@ -38,8 +39,12 @@ class DefaultAppContainer(
         NetworkHomeRepository(homeApi, tokenStorage)
     }
 
+    private val flashcardsCache: FlashcardsCache by lazy {
+        FlashcardsCache()
+    }
+
     override val dailyCheckInRepository: DailyCheckInRepository by lazy {
-        NetworkDailyCheckInRepository(checkInApi, tokenStorage)
+        NetworkDailyCheckInRepository(checkInApi, tokenStorage, flashcardsCache)
     }
 
     override val telemetryRepository: TelemetryRepository by lazy {
