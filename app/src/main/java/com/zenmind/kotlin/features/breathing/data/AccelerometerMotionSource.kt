@@ -13,9 +13,9 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlin.math.sqrt
 
 /**
- * Lee el acelerometro del telefono y lo convierte a Still / Moving.
- * Envuelve el SensorManager de Android y expone el resultado como
- * un Flow, para que el ViewModel lo pueda escuchar con corutinas.
+    Lee el acelerometro del telefono y lo convierte a Still / Moving.
+    Envuelve el SensorManager de Android y expone el resultado como
+    un Flow, para que el ViewModel lo pueda escuchar con corutinas.
  */
 class AccelerometerMotionSource(context: Context) {
 

@@ -12,7 +12,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import com.zenmind.kotlin.features.breathing.data.BreathingRepository
 
 /**
  * Recorre las fases (inhala/sosten/exhala) segundo a segundo y
@@ -23,8 +22,7 @@ import com.zenmind.kotlin.features.breathing.data.BreathingRepository
  * sostenido durante la sesion.
  */
 class BreathingViewModel(
-    private val motionSource: AccelerometerMotionSource? = null,
-    private val repository: BreathingRepository? = null
+    private val motionSource: AccelerometerMotionSource? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BreathingUiState())
@@ -69,8 +67,9 @@ class BreathingViewModel(
     private fun scheduleMovementPause() {
         if (movementPauseJob?.isActive == true) return
         movementPauseJob = viewModelScope.launch {
-            delay(3000)
-            pause("Movimiento detectado, sesion pausada")
+            delay(5000)
+            exercise?.let { start(it) }
+            _uiState.update { it.copy(message = "Movimiento detectado, sesion reiniciada") }
         }
     }
 
@@ -84,6 +83,7 @@ class BreathingViewModel(
         runSession()
     }
 
+    /* Corrutina temporizador */
     private fun runSession() {
         val ex = exercise ?: return
         timerJob = viewModelScope.launch {
@@ -92,16 +92,13 @@ class BreathingViewModel(
                 for (step in ex.steps) {
                     _uiState.update { it.copy(phase = step.phase, secondsLeft = step.seconds) }
                     for (second in step.seconds downTo 1) {
-                        _uiState.update { it.copy(secondsLeft = second) }
-                        delay(1000)
+                        _uiState.update { it.copy(secondsLeft = second, message = null) }
+                        delay(2000)
                     }
                 }
             }
             _uiState.update {
                 it.copy(status = SessionStatus.Finished, phase = null, secondsLeft = 0)
-            }
-            repository?.let { repo ->
-                launch { repo.guardarSesion(ejercicioId = 1) }
             }
         }
     }
