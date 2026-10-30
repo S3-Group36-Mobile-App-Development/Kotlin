@@ -64,17 +64,17 @@ class NetworkDailyCheckInRepository(
         return try {
             var flashcards = FlashcardsCache.getFlashcards(category)
             if (flashcards == null){
-                //Log.d("TEST", "Fetching from Network")
+                Log.d("FlashcardsCache", "Fetching from Network")
                 flashcards = api.getFlashcards(category).map { Flashcard(it.categoria, it.contenido)  }
                 if (flashcards.isNotEmpty()){
                     FlashcardsCache.saveFlashcards(category, flashcards)
                 }
-            } //else {
-                //Log.d("TEST", "Fetching from the cache")
-            //}
+            } else {
+                Log.d("FlashcardsCache", "Fetching from the cache")
+            }
             flashcards.firstOrNull()
         } catch (e: Exception){
-            e.printStackTrace()
+            Log.e("FlashcardsCache", "No se pudo obtener la flashcard de $category", e)
             null
         }
     }
