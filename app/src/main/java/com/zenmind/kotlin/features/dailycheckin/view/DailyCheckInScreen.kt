@@ -298,7 +298,6 @@ private fun CheckInResult(
         Text("Tu card de hoy", fontFamily = NunitoBold, fontSize = 22.sp, color = ZenLabel)
         Spacer(Modifier.height(12.dp))
 
-        // SMART FEATURE: flashcard recomendada según el mood
         val flashcard = state.recommendedFlashcard
         when {
             flashcard != null ->
