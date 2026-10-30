@@ -5,7 +5,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 object ApiClient {
 
-    private const val BASE_URL = "https://zenmind-api.onrender.com/"
+    private const val BASE_URL = "https://zenmind-api-86x0.onrender.com/"
 
     val retrofit: Retrofit by lazy {
         Retrofit.Builder()
