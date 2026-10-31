@@ -8,12 +8,22 @@ import com.zenmind.kotlin.features.dailycheckin.data.db.CheckinDao
 import com.zenmind.kotlin.features.dailycheckin.data.db.CheckinEntity
 import com.zenmind.kotlin.features.dailycheckin.data.db.MoodDao
 import com.zenmind.kotlin.features.dailycheckin.data.db.MoodEntity
+import com.zenmind.kotlin.features.breathing.data.local.BreathingSessionEntity
+import com.zenmind.kotlin.features.breathing.data.local.BreathingSessionDao
 
-@Database(entities = [CheckinEntity::class, MoodEntity::class], version = 3, exportSchema = false)
+@Database(
+    entities = [
+        CheckinEntity::class, 
+        MoodEntity::class,
+        BreathingSessionEntity::class], 
+    version = 4, 
+    exportSchema = false
+    )
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun getCheckinDao(): CheckinDao
     abstract fun getMoodDao(): MoodDao
+    abstract fun breathingSessionDao(): BreathingSessionDao
 
     companion object {
         @Volatile

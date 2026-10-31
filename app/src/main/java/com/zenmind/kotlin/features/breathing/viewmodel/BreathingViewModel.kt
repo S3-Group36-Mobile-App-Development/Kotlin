@@ -3,6 +3,7 @@ package com.zenmind.kotlin.features.breathing.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zenmind.kotlin.features.breathing.data.AccelerometerMotionSource
+import com.zenmind.kotlin.features.breathing.data.BreathingRepository
 import com.zenmind.kotlin.features.breathing.model.BreathingExercise
 import com.zenmind.kotlin.features.breathing.model.MotionState
 import kotlinx.coroutines.Job
@@ -22,7 +23,8 @@ import kotlinx.coroutines.launch
  * sostenido durante la sesion.
  */
 class BreathingViewModel(
-    private val motionSource: AccelerometerMotionSource? = null
+    private val motionSource: AccelerometerMotionSource? = null,
+    private val repository: BreathingRepository? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BreathingUiState())
@@ -31,6 +33,7 @@ class BreathingViewModel(
     private var exercise: BreathingExercise? = null
     private var timerJob: Job? = null
     private var movementPauseJob: Job? = null
+    private var currentEjercicioId: Int = 1
 
     init {
         observeMotion()
@@ -93,13 +96,17 @@ class BreathingViewModel(
                     _uiState.update { it.copy(phase = step.phase, secondsLeft = step.seconds) }
                     for (second in step.seconds downTo 1) {
                         _uiState.update { it.copy(secondsLeft = second, message = null) }
-                        delay(2000)
+                        delay(1000)
                     }
                 }
             }
             _uiState.update {
                 it.copy(status = SessionStatus.Finished, phase = null, secondsLeft = 0)
             }
+            // La sesion termino: registra el uso (local + encola sync).
+            android.util.Log.d("BreathingSync", "Sesion terminada, guardando (repo=${repository != null})")
+            repository?.guardarSesion(ejercicioId = currentEjercicioId)
+            android.util.Log.d("BreathingSync", "guardarSesion llamado")
         }
     }
 
