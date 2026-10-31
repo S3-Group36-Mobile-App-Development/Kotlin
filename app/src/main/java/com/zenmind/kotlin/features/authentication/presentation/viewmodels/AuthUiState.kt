@@ -6,6 +6,8 @@ sealed interface AuthUiState {
 
     data object CheckingSession : AuthUiState
 
+    data class SessionUnavailable(val message: String) : AuthUiState
+
     data object Idle : AuthUiState
 
     data object Loading : AuthUiState

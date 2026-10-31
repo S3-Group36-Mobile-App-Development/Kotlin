@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.io.IOException
 
 class AuthViewModel(
     private val authRepository: AuthRepository
@@ -41,9 +42,16 @@ class AuthViewModel(
                     _uiState.value = AuthUiState.Idle
                 }
 
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (exception: IOException) {
+                _uiState.value = AuthUiState.SessionUnavailable(
+                    "No se pudo comprobar tu sesión. Comprueba tu conexión e inténtalo de nuevo."
+                )
             } catch (exception: Exception) {
-
-                _uiState.value = AuthUiState.Idle
+                _uiState.value = AuthUiState.SessionUnavailable(
+                    "No se pudo comprobar tu sesión. Inténtalo de nuevo."
+                )
             }
         }
     }

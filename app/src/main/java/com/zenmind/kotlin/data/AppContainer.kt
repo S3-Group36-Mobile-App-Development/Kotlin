@@ -16,6 +16,8 @@ import com.zenmind.kotlin.features.dailycheckin.data.NetworkDailyCheckInReposito
 import com.zenmind.kotlin.features.home.data.HomeApiService
 import com.zenmind.kotlin.features.home.data.HomeRepository
 import com.zenmind.kotlin.features.home.data.NetworkHomeRepository
+import com.zenmind.kotlin.features.games.data.GameSyncScheduler
+import kotlinx.coroutines.CancellationException
 
 interface AppContainer {
     val homeRepository: HomeRepository
@@ -73,6 +75,11 @@ class DefaultAppContainer(
         applicationScope.launch {
             connectivityObserver.onlineFlow.collect { online ->
                 if (online) {
+                    applicationScope.launch {
+                        try { GameSyncScheduler.enqueuePending(context) }
+                        catch (e: CancellationException) { throw e }
+                        catch (_: Exception) { /* The next connection or login can enqueue again. */ }
+                    }
                     runCatching { dailyCheckInRepository.syncPending() }
                 }
             }

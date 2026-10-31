@@ -2,8 +2,15 @@ package com.zenmind.kotlin.navigation
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -12,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -32,6 +40,10 @@ import com.zenmind.kotlin.features.dailycheckin.view.DailyCheckInScreen
 import com.zenmind.kotlin.features.home.model.HomeFeature
 import com.zenmind.kotlin.features.home.view.HomeScreen
 import com.zenmind.kotlin.features.home.viewmodel.HomeViewModel
+import com.zenmind.kotlin.features.games.view.BubbleGameScreen
+import com.zenmind.kotlin.features.games.data.GameSyncScheduler
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 import com.zenmind.kotlin.ui.theme.ZenCream
 import com.zenmind.kotlin.ui.theme.ZenOrange
 
@@ -47,6 +59,7 @@ object Routes {
     const val DAILY_CHECKIN = "daily_checkin"
     const val SUPPORT = "support"
     const val BREATHING = "breathing"
+    const val GAMES = "games"
 }
 
 @Composable
@@ -55,6 +68,14 @@ fun ZenNavGraph() {
     val navController = rememberNavController()
 
     val context = LocalContext.current
+    val app = context.applicationContext as ZenMindApplication
+    val scheduleGamesAfterLogin: () -> Unit = {
+        app.applicationScope.launch {
+            try { GameSyncScheduler.enqueuePending(app, reauthenticated = true) }
+            catch (e: CancellationException) { throw e }
+            catch (_: Exception) { /* The next connection can enqueue pending games. */ }
+        }
+    }
     val googleSignInService = remember { GoogleSignInService() }
 
     val tokenStorage = remember {
@@ -100,7 +121,7 @@ fun ZenNavGraph() {
 
         composable(Routes.AUTH_GATE) {
 
-            when (authState) {
+            when (val state = authState) {
 
                 is AuthUiState.CheckingSession -> {
 
@@ -120,6 +141,7 @@ fun ZenNavGraph() {
                 is AuthUiState.Success -> {
 
                     LaunchedEffect(authState) {
+                        scheduleGamesAfterLogin()
 
                         navController.navigate(
                             Routes.HOME
@@ -132,6 +154,31 @@ fun ZenNavGraph() {
                             }
 
                             launchSingleTop = true
+                        }
+                    }
+                }
+
+                is AuthUiState.SessionUnavailable -> {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(ZenCream)
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center
+                    ) {
+                        Text(state.message)
+                        Spacer(Modifier.height(16.dp))
+                        Button(onClick = authViewModel::restoreSession) {
+                            Text("Reintentar")
+                        }
+                        TextButton(onClick = {
+                            navController.navigate(Routes.WELCOME) {
+                                popUpTo(Routes.AUTH_GATE) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        }) {
+                            Text("Ir a bienvenida")
                         }
                     }
                 }
@@ -205,6 +252,7 @@ fun ZenNavGraph() {
                 },
 
                 onLoginSuccess = {
+                    scheduleGamesAfterLogin()
 
                     navController.navigate(
                         Routes.HOME
@@ -237,6 +285,7 @@ fun ZenNavGraph() {
                 },
 
                 onRegisterSuccess = {
+                    scheduleGamesAfterLogin()
 
                     navController.navigate(
                         Routes.HOME
@@ -319,7 +368,7 @@ fun ZenNavGraph() {
                         }
 
                         HomeFeature.GAMES -> {
-
+                            navController.navigate(Routes.GAMES)
                         }
                     }
                 }
@@ -345,6 +394,10 @@ fun ZenNavGraph() {
                     navController.popBackStack()
                 }
             )
+        }
+
+        composable(Routes.GAMES) {
+            BubbleGameScreen(onBack = { navController.popBackStack() })
         }
 
     }

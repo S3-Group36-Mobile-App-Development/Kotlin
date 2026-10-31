@@ -6,6 +6,7 @@ import com.zenmind.kotlin.features.authentication.data.repositories.AuthReposito
 import com.zenmind.kotlin.features.authentication.presentation.viewmodels.AuthUiState
 import com.zenmind.kotlin.features.authentication.presentation.viewmodels.AuthViewModel
 import com.zenmind.kotlin.rules.TestDispatcherRule
+import java.io.IOException
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -62,9 +63,41 @@ class GoogleAuthViewModelTest {
         assertTrue(viewModel.uiState.value is AuthUiState.Error)
     }
 
+    @Test
+    fun restoreSession_networkFailureCanRetryWithoutLoggingOut() = runTest {
+        val repository = FakeAuthRepository(AuthResponse(user, "access", "refresh"))
+        repository.restoreError = IOException("Sin conexión")
+        val viewModel = AuthViewModel(repository)
+
+        viewModel.restoreSession()
+
+        assertTrue(viewModel.uiState.value is AuthUiState.SessionUnavailable)
+        assertEquals(0, repository.logoutCalls)
+
+        repository.restoreError = null
+        repository.restoredUser = user
+        viewModel.restoreSession()
+
+        assertEquals(AuthUiState.Success(user), viewModel.uiState.value)
+        assertEquals(0, repository.logoutCalls)
+    }
+
+    @Test
+    fun restoreSession_withoutStoredSessionShowsWelcomeState() = runTest {
+        val repository = FakeAuthRepository(AuthResponse(user, "access", "refresh"))
+        val viewModel = AuthViewModel(repository)
+
+        viewModel.restoreSession()
+
+        assertEquals(AuthUiState.Idle, viewModel.uiState.value)
+    }
+
     private class FakeAuthRepository(private val response: AuthResponse) : AuthRepository {
         var receivedIdToken: String? = null
         var googleError: Exception? = null
+        var restoreError: Exception? = null
+        var restoredUser: UserDto? = null
+        var logoutCalls = 0
 
         override suspend fun loginWithGoogle(idToken: String): AuthResponse {
             receivedIdToken = idToken
@@ -81,8 +114,11 @@ class GoogleAuthViewModelTest {
             consentimientoDatos: Boolean
         ): AuthResponse = response
 
-        override suspend fun restoreSession(): UserDto? = null
+        override suspend fun restoreSession(): UserDto? {
+            restoreError?.let { throw it }
+            return restoredUser
+        }
 
-        override fun logout() = Unit
+        override fun logout() { logoutCalls++ }
     }
 }
