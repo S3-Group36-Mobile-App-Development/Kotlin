@@ -8,6 +8,7 @@ import com.zenmind.kotlin.features.authentication.data.models.RegisterRequest
 import com.zenmind.kotlin.features.authentication.data.services.AuthApiService
 import com.zenmind.kotlin.features.authentication.data.models.RefreshRequest
 import com.zenmind.kotlin.features.authentication.data.models.UserDto
+import java.io.IOException
 
 class AuthRepositoryImpl(
     private val authApiService: AuthApiService,
@@ -116,15 +117,15 @@ class AuthRepositoryImpl(
         )
 
         if (!refreshResponse.isSuccessful) {
-            tokenStorage.clearTokens()
-            return null
-        }
-
-        val newTokens = refreshResponse.body()
-            ?: run {
+            if (refreshResponse.code() == 401) {
                 tokenStorage.clearTokens()
                 return null
             }
+            throw IOException("No se pudo verificar la sesión. Comprueba tu conexión e inténtalo de nuevo.")
+        }
+
+        val newTokens = refreshResponse.body()
+            ?: throw IOException("El servidor no pudo verificar la sesión. Inténtalo de nuevo.")
 
         tokenStorage.saveTokens(
             accessToken = newTokens.accessToken,
@@ -136,11 +137,15 @@ class AuthRepositoryImpl(
         )
 
         if (!userResponse.isSuccessful) {
-            tokenStorage.clearTokens()
-            return null
+            if (userResponse.code() == 401) {
+                tokenStorage.clearTokens()
+                return null
+            }
+            throw IOException("No se pudo verificar la sesión. Comprueba tu conexión e inténtalo de nuevo.")
         }
 
         return userResponse.body()
+            ?: throw IOException("El servidor no pudo verificar la sesión. Inténtalo de nuevo.")
     }
 
     override fun logout() {
