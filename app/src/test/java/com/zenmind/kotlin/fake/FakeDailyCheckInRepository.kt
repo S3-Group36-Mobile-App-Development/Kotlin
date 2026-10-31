@@ -1,9 +1,9 @@
 package com.zenmind.kotlin.fake
 
-import com.zenmind.kotlin.features.dailycheckin.data.AlreadyCheckedInException
 import com.zenmind.kotlin.features.dailycheckin.data.DailyCheckInRepository
 import com.zenmind.kotlin.features.dailycheckin.model.Flashcard
 import com.zenmind.kotlin.features.dailycheckin.model.Mood
+import com.zenmind.kotlin.features.dailycheckin.model.SaveResult
 import com.zenmind.kotlin.features.dailycheckin.model.Streak
 
 object FakeCheckInDataSource {
@@ -19,13 +19,17 @@ class FakeDailyCheckInRepository(
 
     var savedMoodId: Long? = null
 
+    override fun isGuest() = false
     override suspend fun getMoods() = FakeCheckInDataSource.moods
-    override suspend fun getStreak() = FakeCheckInDataSource.streak
-    override suspend fun getTodayCheckInMood(): Mood? = null
+    override suspend fun getStreak(): Streak? = FakeCheckInDataSource.streak
+    override suspend fun getTodayCheckInMood(): Mood? = if (alreadyExists) FakeCheckInDataSource.anxious else null
+    override suspend fun isTodayPending() = false
+    override suspend fun syncPending() = 0
 
-    override suspend fun saveCheckIn(moodId: Long, note: String?) {
-        if (alreadyExists) throw AlreadyCheckedInException()
-        savedMoodId = moodId
+    override suspend fun saveCheckIn(mood: Mood, note: String?): SaveResult {
+        if (alreadyExists) return SaveResult.ALREADY_REGISTERED
+        savedMoodId = mood.id
+        return SaveResult.SYNCED
     }
 
     override suspend fun getRecommendedFlashcard(mood: Mood) = FakeCheckInDataSource.flashcard

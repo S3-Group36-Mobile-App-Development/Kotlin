@@ -26,6 +26,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.OutlinedTextField
@@ -35,6 +36,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.CloudOff
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -56,6 +65,7 @@ import com.zenmind.kotlin.ui.components.ZenTopBar
 import com.zenmind.kotlin.ui.theme.Nunito
 import com.zenmind.kotlin.ui.theme.NunitoBold
 import com.zenmind.kotlin.ui.theme.ShortStack
+import com.zenmind.kotlin.ui.theme.ZenBrown
 import com.zenmind.kotlin.ui.theme.ZenCream
 import com.zenmind.kotlin.ui.theme.ZenGreenLine
 import com.zenmind.kotlin.ui.theme.ZenText
@@ -79,9 +89,9 @@ fun DailyCheckInScreen(
     val state by checkInViewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(state.justSaved) {
-        if (state.justSaved) {
-            snackbarHostState.showSnackbar("Check-in guardado")
+    LaunchedEffect(state.savedMessage) {
+        state.savedMessage?.let {
+            snackbarHostState.showSnackbar(it)
             checkInViewModel.onSavedMessageShown()
         }
     }
@@ -100,7 +110,17 @@ fun DailyCheckInScreen(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
-        )
+                .padding(bottom = 24.dp)
+        ) { data ->
+            Snackbar(
+                containerColor = ZenBrown,
+                contentColor = ZenCream,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.padding(horizontal = 16.dp)
+            ) {
+                Text(data.visuals.message, fontFamily = Nunito, fontSize = 13.sp)
+            }
+        }
     }
 }
 
@@ -124,18 +144,12 @@ fun DailyCheckInContent(
     ) {
         ZenTopBar(title = "Check-in", onBack = onBack)
 
-        // Sin sesión (invitado)
-        if (state.notLoggedIn) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(
-                    "Inicia sesión para hacer tu check-in",
-                    fontFamily = NunitoBold,
-                    fontSize = 22.sp,
-                    color = ZenLabel,
-                    textAlign = TextAlign.Center
-                )
-            }
-        } else if (state.isLoading) {
+        var offlineDismissed by remember(state.isOffline) { mutableStateOf(false) }
+        if (state.isOffline && !offlineDismissed) {
+            OfflineBanner(onClose = { offlineDismissed = true })
+        }
+
+        if (state.isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = ZenOrange)
             }
@@ -239,7 +253,11 @@ private fun CheckInForm(
             }
         }
 
-        if (canEdit && state.moods.isNotEmpty() && state.selectedMoodId == null) {
+        val showMoodHint = canEdit && state.moods.isNotEmpty() && state.selectedMoodId == null
+        if (!showMoodHint && state.isGuest) {
+            NoticeBanner("Modo invitado: tu check-in se guardará solo en este teléfono.")
+        }
+        if (showMoodHint) {
             Text(
                 "Elige cómo te sientes para guardar",
                 fontFamily = Nunito,
@@ -272,68 +290,87 @@ private fun CheckInResult(
 ) {
     val mood = state.moods.firstOrNull { it.id == state.selectedMoodId }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(top = 20.dp)
-    ) {
-        mood?.let {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Hoy registraste", fontFamily = NunitoBold, fontSize = 16.sp, color = ZenLabel)
-                Spacer(Modifier.height(10.dp))
-                MoodBadge(mood = it)
-            }
-        }
-
-        state.streak?.let {
-            Spacer(Modifier.height(20.dp))
-            StreakPanel(streak = it)
-        }
-
-        Spacer(Modifier.height(24.dp))
-        Text("Tu card de hoy", fontFamily = NunitoBold, fontSize = 22.sp, color = ZenLabel)
-        Spacer(Modifier.height(12.dp))
-
-        val flashcard = state.recommendedFlashcard
-        when {
-            flashcard != null ->
-                FlashcardCard(title = flashcard.category, content = flashcard.content, source = flashcard.source)
-            state.isLoadingCard ->
-                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = ZenOrange, modifier = Modifier.size(28.dp))
+    Column(Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+                .padding(top = 20.dp)
+        ) {
+            mood?.let {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Hoy registraste", fontFamily = NunitoBold, fontSize = 16.sp, color = ZenLabel)
+                    Spacer(Modifier.height(10.dp))
+                    MoodBadge(mood = it)
                 }
-            else ->
-                Text(
-                    "Gracias por registrar cómo te sientes. Vuelve mañana para seguir tu racha.",
-                    fontFamily = Nunito,
-                    fontSize = 14.sp,
-                    color = ZenLabel
-                )
+            }
+
+            state.streak?.let {
+                Spacer(Modifier.height(20.dp))
+                StreakPanel(streak = it)
+            }
+
+            Spacer(Modifier.height(24.dp))
+            Text("Tu card de hoy", fontFamily = NunitoBold, fontSize = 22.sp, color = ZenLabel)
+            Spacer(Modifier.height(12.dp))
+
+            val flashcard = state.recommendedFlashcard
+            when {
+                flashcard != null ->
+                    FlashcardCard(title = flashcard.category, content = flashcard.content, source = flashcard.source)
+                state.isLoadingCard ->
+                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = ZenOrange, modifier = Modifier.size(28.dp))
+                    }
+                state.isOffline && mood?.name in MOODS_WITH_CARD ->
+                    Text(
+                        "Tu card aparecerá cuando vuelvas a tener internet.",
+                        fontFamily = Nunito,
+                        fontSize = 14.sp,
+                        color = ZenLabel
+                    )
+                else ->
+                    Text(
+                        "Gracias por registrar cómo te sientes. Vuelve mañana para seguir tu racha.",
+                        fontFamily = Nunito,
+                        fontSize = 14.sp,
+                        color = ZenLabel
+                    )
+            }
+
+            if (mood?.name == "Ansioso") {
+                Spacer(Modifier.height(24.dp))
+                Text("Te recomendamos", fontFamily = NunitoBold, fontSize = 14.sp, color = ZenLabel)
+                Spacer(Modifier.height(8.dp))
+                Button(
+                    onClick = onGoToBreathing,
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = ZenSage),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 52.dp)
+                ) {
+                    BasicText(
+                        text = "Hacer un ejercicio de respiración",
+                        style = TextStyle(fontFamily = ShortStack, color = ZenIcon, textAlign = TextAlign.Center),
+                        maxLines = 1,
+                        autoSize = TextAutoSize.StepBased(minFontSize = 10.sp, maxFontSize = 15.sp)
+                    )
+                }
+            }
         }
 
-        if (mood?.name == "Ansioso") {
-            Spacer(Modifier.height(24.dp))
-            Text("Te recomendamos", fontFamily = NunitoBold, fontSize = 14.sp, color = ZenLabel)
-            Spacer(Modifier.height(8.dp))
-            Button(
-                onClick = onGoToBreathing,
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = ZenSage),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 52.dp)
-            ) {
-                BasicText(
-                    text = "Hacer un ejercicio de respiración",
-                    style = TextStyle(fontFamily = ShortStack, color = ZenIcon, textAlign = TextAlign.Center),
-                    maxLines = 1,
-                    autoSize = TextAutoSize.StepBased(minFontSize = 10.sp, maxFontSize = 15.sp)
-                )
-            }
+        Spacer(Modifier.height(8.dp))
+        if (state.isGuest) {
+            NoticeBanner("Modo invitado: tu check-in quedó guardado solo en este teléfono.")
+        } else if (state.pendingSync) {
+            NoticeBanner("Pendiente de sincronizar: se enviará cuando vuelvas a tener internet.")
+        }
+        if (state.streak == null && state.isOffline) {
+            NoticeBanner("Tu racha aparecerá cuando vuelvas a tener internet.")
         }
     }
 }
@@ -413,6 +450,56 @@ private fun MoodBadge(mood: Mood) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(emojiFor(mood.name), fontSize = 32.sp)
         Text(mood.displayName, fontFamily = NunitoBold, fontSize = 16.sp, color = ZenLabel)
+    }
+}
+
+private val MOODS_WITH_CARD = setOf("Ansioso", "Estresado")
+
+@Composable
+private fun OfflineBanner(onClose: () -> Unit) {
+    val shape = RoundedCornerShape(12.dp)
+    Box(
+        modifier = Modifier
+            .padding(top = 8.dp)
+            .fillMaxWidth()
+            .background(ZenBrown, shape)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(start = 14.dp, top = 12.dp, bottom = 12.dp, end = 32.dp)
+        ) {
+            Icon(Icons.Outlined.CloudOff, contentDescription = null, tint = ZenCream, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(10.dp))
+            Text(
+                "Sin conexión. Tus check-ins se guardan en este teléfono y se envían cuando vuelvas a tener internet.",
+                fontFamily = Nunito,
+                fontSize = 13.sp,
+                color = ZenCream
+            )
+        }
+        IconButton(
+            onClick = onClose,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .size(28.dp)
+        ) {
+            Icon(Icons.Outlined.Close, contentDescription = "Cerrar aviso", tint = ZenCream, modifier = Modifier.size(14.dp))
+        }
+    }
+}
+
+@Composable
+private fun NoticeBanner(text: String) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+        modifier = Modifier
+            .padding(bottom = 6.dp)
+            .fillMaxWidth()
+    ) {
+        Icon(Icons.Outlined.Info, contentDescription = null, tint = ZenSubtle, modifier = Modifier.size(14.dp))
+        Spacer(Modifier.width(6.dp))
+        Text(text, fontFamily = Nunito, fontSize = 12.sp, color = ZenSubtle)
     }
 }
 

@@ -177,6 +177,8 @@ fun ZenNavGraph() {
 
                 onGuestClick = {
 
+                    authViewModel.logout()
+
                     navController.navigate(
                         Routes.HOME
                     ) {

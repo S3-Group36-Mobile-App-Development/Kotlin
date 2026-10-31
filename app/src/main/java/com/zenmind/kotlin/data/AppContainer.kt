@@ -2,12 +2,16 @@ package com.zenmind.kotlin.data
 
 import android.content.Context
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import com.zenmind.kotlin.core.database.AppDatabase
 import com.zenmind.kotlin.core.network.ApiClient
+import com.zenmind.kotlin.core.network.ConnectivityObserver
 import com.zenmind.kotlin.core.storage.TokenStorage
 import com.zenmind.kotlin.core.telemetry.TelemetryApiService
 import com.zenmind.kotlin.core.telemetry.TelemetryRepository
 import com.zenmind.kotlin.features.dailycheckin.data.CheckInApiService
 import com.zenmind.kotlin.features.dailycheckin.data.DailyCheckInRepository
+import com.zenmind.kotlin.features.dailycheckin.data.FlashcardsCache
 import com.zenmind.kotlin.features.dailycheckin.data.NetworkDailyCheckInRepository
 import com.zenmind.kotlin.features.home.data.HomeApiService
 import com.zenmind.kotlin.features.home.data.HomeRepository
@@ -17,6 +21,7 @@ interface AppContainer {
     val homeRepository: HomeRepository
     val dailyCheckInRepository: DailyCheckInRepository
     val telemetryRepository: TelemetryRepository
+    val connectivityObserver: ConnectivityObserver
 }
 
 class DefaultAppContainer(
@@ -25,6 +30,14 @@ class DefaultAppContainer(
 ) : AppContainer {
 
     private val tokenStorage = TokenStorage(context)
+
+    override val connectivityObserver: ConnectivityObserver by lazy {
+        ConnectivityObserver(context)
+    }
+
+    private val database: AppDatabase by lazy {
+        AppDatabase.getInstance(context)
+    }
 
     private val checkInApi: CheckInApiService by lazy {
         ApiClient.retrofit.create(CheckInApiService::class.java)
@@ -38,11 +51,31 @@ class DefaultAppContainer(
         NetworkHomeRepository(homeApi, tokenStorage)
     }
 
+    private val flashcardsCache: FlashcardsCache by lazy {
+        FlashcardsCache()
+    }
+
     override val dailyCheckInRepository: DailyCheckInRepository by lazy {
-        NetworkDailyCheckInRepository(checkInApi, tokenStorage)
+        NetworkDailyCheckInRepository(
+            checkInApi,
+            tokenStorage,
+            flashcardsCache,
+            database.getCheckinDao(),
+            database.getMoodDao()
+        )
     }
 
     override val telemetryRepository: TelemetryRepository by lazy {
         TelemetryRepository(ApiClient.retrofit.create(TelemetryApiService::class.java), applicationScope)
+    }
+
+    init {
+        applicationScope.launch {
+            connectivityObserver.onlineFlow.collect { online ->
+                if (online) {
+                    runCatching { dailyCheckInRepository.syncPending() }
+                }
+            }
+        }
     }
 }
