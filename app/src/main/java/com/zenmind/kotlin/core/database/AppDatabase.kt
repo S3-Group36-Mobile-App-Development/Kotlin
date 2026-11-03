@@ -14,6 +14,8 @@ import com.zenmind.kotlin.features.breathing.data.local.BreathingSessionEntity
 import com.zenmind.kotlin.features.breathing.data.local.BreathingSessionDao
 import com.zenmind.kotlin.features.games.data.GameSessionDao
 import com.zenmind.kotlin.features.games.data.GameSessionEntity
+import com.zenmind.kotlin.features.breathing.data.local.BreathingExerciseEntity
+import com.zenmind.kotlin.features.breathing.data.local.BreathingExerciseDao
 
 val MIGRATION_4_5 = object : Migration(4, 5) {
     override fun migrate(db: SupportSQLiteDatabase) {
@@ -22,6 +24,13 @@ val MIGRATION_4_5 = object : Migration(4, 5) {
             `correctTaps` INTEGER NOT NULL, `completedAt` TEXT NOT NULL,
             `syncStatus` TEXT NOT NULL, `ownerId` TEXT NOT NULL,
             `isGuest` INTEGER NOT NULL, PRIMARY KEY(`id`))""")
+
+        // Cache local del catalogo de ejercicios de respiracion.
+        db.execSQL("""CREATE TABLE IF NOT EXISTS `breathing_exercises` (
+            `id` INTEGER NOT NULL, `titulo` TEXT NOT NULL, `descripcion` TEXT,
+            `duracion` INTEGER NOT NULL, `inhalar` INTEGER, `sostener` INTEGER,
+            `exhalar` INTEGER, `sostener2` INTEGER, `ciclos` INTEGER NOT NULL,
+            `vibra` INTEGER NOT NULL, PRIMARY KEY(`id`))""")
     }
 }
 
@@ -30,6 +39,7 @@ val MIGRATION_4_5 = object : Migration(4, 5) {
         CheckinEntity::class, 
         MoodEntity::class,
         BreathingSessionEntity::class,
+        BreathingExerciseEntity::class,
         GameSessionEntity::class],
     version = 5,
     exportSchema = false
@@ -39,6 +49,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun getCheckinDao(): CheckinDao
     abstract fun getMoodDao(): MoodDao
     abstract fun breathingSessionDao(): BreathingSessionDao
+    abstract fun breathingExerciseDao(): BreathingExerciseDao
     abstract fun gameSessionDao(): GameSessionDao
 
     companion object {

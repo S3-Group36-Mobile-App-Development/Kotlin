@@ -35,6 +35,14 @@ import com.zenmind.kotlin.features.breathing.viewmodel.SessionStatus
 import androidx.compose.ui.platform.LocalContext
 import com.zenmind.kotlin.features.breathing.viewmodel.BreathingViewModelFactory
 import com.zenmind.kotlin.ui.components.ZenTopBar
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Air
+import androidx.compose.material3.Icon
+import androidx.compose.ui.draw.clip
 
 private val Cream = Color(0xFFFFF9E2)
 private val TextBrown = Color(0xFF8A6F5B)
@@ -44,13 +52,31 @@ private val CardCream = Color(0xFFFEECD0)
 
 @Composable
 fun BreathingSessionScreen(
+    exerciseId: Int = -1,
     onBack: () -> Unit = {},
+    onOpenCatalog: () -> Unit = {},
     viewModel: BreathingViewModel = viewModel(
         factory = BreathingViewModelFactory(LocalContext.current)
     )
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val exercise = BreathingCatalog.default()
+    val context = LocalContext.current
+    val exercise by androidx.compose.runtime.produceState(
+        initialValue = BreathingCatalog.default(),
+        key1 = exerciseId
+    ) {
+        val repo = com.zenmind.kotlin.features.breathing.data.BreathingRepository(
+            dao = com.zenmind.kotlin.core.database.AppDatabase.getInstance(context).breathingSessionDao(),
+            exerciseDao = com.zenmind.kotlin.core.database.AppDatabase.getInstance(context).breathingExerciseDao(),
+            preferences = com.zenmind.kotlin.features.breathing.data.local.BreathingPreferences(context),
+            context = context.applicationContext
+        )
+        val catalog = repo.getExercises()
+        val chosenId = if (exerciseId != -1) exerciseId else repo.getFavorite()
+        value = catalog.firstOrNull { it.id == chosenId }
+            ?: catalog.firstOrNull()
+            ?: BreathingCatalog.default()
+    }
 
     Box(
         modifier = Modifier
@@ -64,7 +90,27 @@ fun BreathingSessionScreen(
                 .padding(horizontal = 24.dp, vertical = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            ZenTopBar(title = "Respiración", onBack = onBack)
+            Box(modifier = Modifier.fillMaxWidth()) {
+                ZenTopBar(title = "Respiración", onBack = onBack)
+
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .background(CardCream)
+                        .border(2.dp, Peach, CircleShape)
+                        .clickable(onClick = onOpenCatalog)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Air,
+                        contentDescription = "Ver ejercicios",
+                        tint = TextBrown,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
 
             Spacer(Modifier.height(20.dp))
 

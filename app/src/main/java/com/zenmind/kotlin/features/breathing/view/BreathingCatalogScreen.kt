@@ -1,4 +1,4 @@
-/**package com.zenmind.kotlin.features.breathing.view
+package com.zenmind.kotlin.features.breathing.view
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -16,19 +16,29 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.zenmind.kotlin.features.breathing.data.BreathingCatalog
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.zenmind.kotlin.features.breathing.model.BreathingExercise
+import com.zenmind.kotlin.features.breathing.viewmodel.BreathingCatalogViewModel
+import com.zenmind.kotlin.features.breathing.viewmodel.BreathingViewModelFactory
 import com.zenmind.kotlin.ui.components.ZenTopBar
 
 private val Cream = Color(0xFFFFF9E2)
@@ -36,22 +46,15 @@ private val TextBrown = Color(0xFF8A6F5B)
 private val Peach = Color(0xFFDCA278)
 private val CardCream = Color(0xFFFEECD0)
 
-/**
- * Lista de los ejercicios de respiracion disponibles.
- *
- * @param onBack vuelve a la pantalla anterior.
- * @param onSelect se llama con el ejercicio elegido al tocar "Empezar".
- */
 @Composable
 fun BreathingCatalogScreen(
-    onBack: () -> Unit = {}, onSelect: (BreathingExercise) -> Unit = {}
-) {
-    val exercises = listOf(
-        BreathingCatalog.default(),
-        BreathingCatalog.equal(),
-        BreathingCatalog.sevenEleven(),
-        BreathingCatalog.relax()
+    onBack: () -> Unit = {},
+    onSelect: (BreathingExercise) -> Unit = {},
+    viewModel: BreathingCatalogViewModel = viewModel(
+        factory = BreathingViewModelFactory(LocalContext.current)
     )
+) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     Box(
         modifier = Modifier
@@ -72,10 +75,12 @@ fun BreathingCatalogScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 contentPadding = PaddingValues(vertical = 8.dp)
             ) {
-                items(exercises) { exercise ->
+                items(state.exercises) { exercise ->
                     ExerciseCard(
                         exercise = exercise,
-                        onStart = { onSelect(exercise) }
+                        isFavorite = exercise.id == state.favoriteId,
+                        onStart = { onSelect(exercise) },
+                        onToggleFavorite = { viewModel.toggleFavorite(exercise.id) }
                     )
                 }
             }
@@ -83,13 +88,12 @@ fun BreathingCatalogScreen(
     }
 }
 
-/**
- * Ficha
- */
 @Composable
 private fun ExerciseCard(
     exercise: BreathingExercise,
-    onStart: () -> Unit
+    isFavorite: Boolean,
+    onStart: () -> Unit,
+    onToggleFavorite: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -99,14 +103,25 @@ private fun ExerciseCard(
             .border(2.dp, Peach, RoundedCornerShape(24.dp))
             .padding(18.dp)
     ) {
-        Text(
-            text = exercise.name,
-            color = TextBrown,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(Modifier.height(4.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = exercise.name,
+                color = TextBrown,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f)
+            )
+            IconButton(onClick = onToggleFavorite) {
+                Icon(
+                    imageVector = if (isFavorite) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                    contentDescription = if (isFavorite) "Quitar de favoritos" else "Marcar favorito",
+                    tint = Peach
+                )
+            }
+        }
 
         Text(
             text = exercise.steps.joinToString(" - ") { it.seconds.toString() },
@@ -134,5 +149,3 @@ private fun ExerciseCard(
         }
     }
 }
-
-**/

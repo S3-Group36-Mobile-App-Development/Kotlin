@@ -36,6 +36,7 @@ import com.zenmind.kotlin.features.authentication.presentation.views.LoginScreen
 import com.zenmind.kotlin.features.authentication.presentation.views.RegisterScreen
 import com.zenmind.kotlin.features.authentication.presentation.views.WelcomeScreen
 import com.zenmind.kotlin.features.breathing.view.BreathingSessionScreen
+import com.zenmind.kotlin.features.breathing.view.BreathingCatalogScreen
 import com.zenmind.kotlin.features.dailycheckin.view.DailyCheckInScreen
 import com.zenmind.kotlin.features.home.model.HomeFeature
 import com.zenmind.kotlin.features.home.view.HomeScreen
@@ -59,7 +60,10 @@ object Routes {
     const val DAILY_CHECKIN = "daily_checkin"
     const val SUPPORT = "support"
     const val BREATHING = "breathing"
+    const val BREATHING_CATALOG = "breathing_catalog"
     const val GAMES = "games"
+
+    fun breathingSession(exerciseId: Int = -1) = "breathing?exerciseId=$exerciseId"
 }
 
 @Composable
@@ -203,6 +207,18 @@ fun ZenNavGraph() {
                 }
             }
         }
+
+        composable(Routes.BREATHING_CATALOG) {
+            BreathingCatalogScreen(
+                onBack = { navController.popBackStack() },
+                onSelect = { exercise ->
+                    navController.navigate(Routes.breathingSession(exercise.id)) {
+                        popUpTo(Routes.BREATHING_CATALOG) { inclusive = true }
+                    }
+                }
+            )
+        }
+
 
         composable(Routes.WELCOME) {
 
@@ -387,12 +403,20 @@ fun ZenNavGraph() {
             )
         }
 
-        composable(Routes.BREATHING) {
-
-            BreathingSessionScreen(
-                onBack = {
-                    navController.popBackStack()
+        composable(
+            route = "breathing?exerciseId={exerciseId}",
+            arguments = listOf(
+                androidx.navigation.navArgument("exerciseId") {
+                    type = androidx.navigation.NavType.IntType
+                    defaultValue = -1
                 }
+            )
+        ) { backStackEntry ->
+            val exerciseId = backStackEntry.arguments?.getInt("exerciseId") ?: -1
+            BreathingSessionScreen(
+                exerciseId = exerciseId,
+                onBack = { navController.popBackStack() },
+                onOpenCatalog = { navController.navigate(Routes.BREATHING_CATALOG)}
             )
         }
 
