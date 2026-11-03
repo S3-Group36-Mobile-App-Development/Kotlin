@@ -8,7 +8,7 @@ package com.zenmind.kotlin.features.breathing.model
  * - cycles
  */
 data class BreathingExercise(
-    val id: String,
+    val id: Int,
     val name: String,
     val description: String,
     val steps: List<BreathingStep>,
