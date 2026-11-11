@@ -13,8 +13,8 @@ interface CheckinDao {
     @Query("SELECT * FROM checkin_table WHERE date = :date AND userId = :userId LIMIT 1")
     suspend fun getByDate(date: String, userId: String): CheckinEntity?
 
-    @Query("SELECT * FROM checkin_table WHERE synced = 0 AND isGuest = 0 AND userId = :userId ORDER BY id")
-    suspend fun getPending(userId: String): List<CheckinEntity>
+    @Query("SELECT * FROM checkin_table WHERE synced = 0 AND isGuest = 0 AND userId = :userId AND date = :date ORDER BY id")
+    suspend fun getPending(userId: String, date: String): List<CheckinEntity>
 
     @Query("SELECT DISTINCT date FROM checkin_table WHERE userId = :userId ORDER BY date DESC")
     suspend fun getDates(userId: String): List<String>

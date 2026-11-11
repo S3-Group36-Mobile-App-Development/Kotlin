@@ -16,6 +16,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.json.JSONObject
 
 interface DailyCheckInRepository {
@@ -42,6 +44,8 @@ class OfflineFirstDailyCheckInRepository(
         val token = tokenStorage.getAccessToken() ?: throw NotLoggedInException()
         return "Bearer $token"
     }
+
+    private val syncMutex = Mutex()
 
     override fun isGuest(): Boolean = tokenStorage.getAccessToken() == null
 
@@ -100,8 +104,12 @@ class OfflineFirstDailyCheckInRepository(
 
     override suspend fun syncPending(): Int {
         if (isGuest()) return 0
+        return syncMutex.withLock { sendPendingOfToday() }
+    }
+
+    private suspend fun sendPendingOfToday(): Int {
         var synced = 0
-        for (pending in checkinDao.getPending(currentUserId())) {
+        for (pending in checkinDao.getPending(currentUserId(), localToday())) {
             try {
                 val response = api.saveCheckIn(auth(), CheckInRequest(pending.moodId, pending.note))
                 if (response.isSuccessful || response.code() == 409) {
