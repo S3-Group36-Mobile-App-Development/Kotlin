@@ -71,16 +71,13 @@ class OfflineFirstDailyCheckInRepository(
         if (isGuest()) return null
 
         return try {
-            val utc = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-            utc.timeZone = TimeZone.getTimeZone("UTC")
-            val today = utc.format(Date())
-
-            val todayCheckIn = api.getCheckIns(auth()).find { it.registradoEn.take(10) == today }
+            val today = localToday()
+            val todayCheckIn = api.getCheckIns(auth()).find { toLocalDate(it.registradoEn) == today }
             todayCheckIn?.let {
                 val mood = Mood(it.estadoAnimo.id.toLong(), it.estadoAnimo.nombre)
                 checkinDao.insertCheckin(
                     CheckinEntity(
-                        date = localToday(),
+                        date = today,
                         moodId = mood.id,
                         moodName = mood.name,
                         note = null,
@@ -120,6 +117,17 @@ class OfflineFirstDailyCheckInRepository(
 
     private fun localToday(): String =
         SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+
+    private fun toLocalDate(isoUtc: String): String? {
+        return try {
+            val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
+            parser.timeZone = TimeZone.getTimeZone("UTC")
+            val instant = parser.parse(isoUtc.take(19)) ?: return null
+            SimpleDateFormat("yyyy-MM-dd", Locale.US).format(instant)
+        } catch (e: Exception) {
+            null
+        }
+    }
 
     private fun streakFromDates(dates: List<String>): Streak {
         if (dates.isEmpty()) return Streak(0, 0)
