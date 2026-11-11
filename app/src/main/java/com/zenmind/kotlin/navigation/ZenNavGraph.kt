@@ -386,10 +386,6 @@ fun ZenNavGraph() {
 
                     when (feature) {
 
-                        HomeFeature.SUPPORT -> {
-
-                        }
-
                         HomeFeature.PANIC -> {
                             navController.navigate(
                                 Routes.PANIC
@@ -402,14 +398,6 @@ fun ZenNavGraph() {
                             navController.navigate(
                                 Routes.BREATHING
                             )
-                        }
-
-                        HomeFeature.PROTOCOLS -> {
-
-                        }
-
-                        HomeFeature.FLASHCARDS -> {
-
                         }
 
                         HomeFeature.GAMES -> {

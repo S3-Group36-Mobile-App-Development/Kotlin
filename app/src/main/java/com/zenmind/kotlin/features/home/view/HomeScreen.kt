@@ -73,7 +73,6 @@ fun HomeScreen(
     viewModel: HomeViewModel,
     onFeatureClick: (HomeFeature) -> Unit,
     onContinueClick: () -> Unit = {},
-    onCallClick: () -> Unit = {},
     onTabClick: (ZenTab) -> Unit = {},
     onLogoutClick: () -> Unit = {}
 ) {
@@ -104,7 +103,6 @@ fun HomeScreen(
                 data = s.data,
                 onFeatureClick = onFeatureClick,
                 onContinueClick = onContinueClick,
-                onCallClick = onCallClick,
                 onTabClick = onTabClick,
                 onLogoutClick = onLogoutClick
             )
@@ -117,7 +115,6 @@ fun HomeContent(
     data: HomeData,
     onFeatureClick: (HomeFeature) -> Unit,
     onContinueClick: () -> Unit = {},
-    onCallClick: () -> Unit = {},
     onTabClick: (ZenTab) -> Unit = {},
     onLogoutClick: () -> Unit = {}
 ) {
