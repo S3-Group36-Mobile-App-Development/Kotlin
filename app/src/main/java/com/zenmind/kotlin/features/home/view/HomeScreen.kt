@@ -133,14 +133,14 @@ fun HomeContent(
 
         floatingActionButton = {
             FloatingActionButton(
-                onClick = onCallClick,
+                onClick = { onFeatureClick(HomeFeature.PANIC) },
                 shape = CircleShape,
                 containerColor = ZenOrange,
                 contentColor = Color.White
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Phone,
-                    contentDescription = "Llamar a tu contacto de apoyo"
+                    contentDescription = "Botón de pánico"
                 )
             }
         }

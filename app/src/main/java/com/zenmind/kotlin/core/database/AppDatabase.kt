@@ -16,6 +16,8 @@ import com.zenmind.kotlin.features.games.data.GameSessionDao
 import com.zenmind.kotlin.features.games.data.GameSessionEntity
 import com.zenmind.kotlin.features.breathing.data.local.BreathingExerciseEntity
 import com.zenmind.kotlin.features.breathing.data.local.BreathingExerciseDao
+import com.zenmind.kotlin.features.panicbutton.data.ContactDao
+import com.zenmind.kotlin.features.panicbutton.data.ContactEntity
 
 val MIGRATION_4_5 = object : Migration(4, 5) {
     override fun migrate(db: SupportSQLiteDatabase) {
@@ -34,14 +36,24 @@ val MIGRATION_4_5 = object : Migration(4, 5) {
     }
 }
 
+val MIGRATION_5_6 = object : Migration(5, 6) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("""CREATE TABLE IF NOT EXISTS `contacts` (
+            `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+            `name` TEXT NOT NULL,
+            `phone` TEXT NOT NULL)""")
+    }
+}
+
 @Database(
     entities = [
         CheckinEntity::class, 
         MoodEntity::class,
         BreathingSessionEntity::class,
         BreathingExerciseEntity::class,
-        GameSessionEntity::class],
-    version = 5,
+        GameSessionEntity::class,
+        ContactEntity::class],
+    version = 6,
     exportSchema = false
     )
 abstract class AppDatabase : RoomDatabase() {
@@ -52,6 +64,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun breathingExerciseDao(): BreathingExerciseDao
     abstract fun gameSessionDao(): GameSessionDao
 
+    abstract fun panicButtonDao(): ContactDao
+
     companion object {
         @Volatile
         private var instance: AppDatabase? = null
@@ -61,7 +75,7 @@ abstract class AppDatabase : RoomDatabase() {
                 synchronized(this) {
                     if (instance == null) {
                         instance = Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "zenmind_db")
-                            .addMigrations(MIGRATION_4_5)
+                            .addMigrations(MIGRATION_4_5, MIGRATION_5_6)
                             .build()
                     }
                 }
