@@ -29,11 +29,9 @@ interface DailyCheckInRepository {
     suspend fun getRecommendedFlashcard(mood: Mood): Flashcard?
 }
 
-class AlreadyCheckedInException : Exception("Ya registraste tu check-in de hoy.")
-
 class NotLoggedInException : Exception("Inicia sesión para hacer tu check-in.")
 
-class NetworkDailyCheckInRepository(
+class OfflineFirstDailyCheckInRepository(
     private val api: CheckInApiService,
     private val tokenStorage: TokenStorage,
     private val flashcardsCache: FlashcardsCache,
@@ -158,9 +156,7 @@ class NetworkDailyCheckInRepository(
     override suspend fun saveCheckIn(mood: Mood, note: String?): SaveResult {
         val guest = tokenStorage.getAccessToken() == null
         val userId = currentUserId()
-
-        val format = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-        val today = format.format(Date())
+        val today = localToday()
 
         if (checkinDao.getByDate(today, userId) != null) {
             return SaveResult.ALREADY_REGISTERED
