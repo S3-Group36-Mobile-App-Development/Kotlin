@@ -6,6 +6,9 @@ import androidx.lifecycle.ViewModelProvider
 import com.zenmind.kotlin.core.database.AppDatabase
 import com.zenmind.kotlin.features.breathing.data.AccelerometerMotionSource
 import com.zenmind.kotlin.features.breathing.data.BreathingRepository
+import com.zenmind.kotlin.features.breathing.data.local.BreathingPreferences
+import com.zenmind.kotlin.features.breathing.viewmodel.BreathingCatalogViewModel
+import com.zenmind.kotlin.features.breathing.viewmodel.BreathingViewModel
 
 /**
  * Crea el BreathingViewModel inyectandole el sensor del acelerometro
@@ -17,15 +20,24 @@ class BreathingViewModelFactory(
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
 
         val appContext = context.applicationContext
+        val db = AppDatabase.getInstance(appContext)
 
-        val sensor = AccelerometerMotionSource(appContext)
-
-        val dao = AppDatabase.getInstance(appContext).breathingSessionDao()
-        val repository = BreathingRepository(dao, appContext)
-
-        val myViewModel = BreathingViewModel(sensor, repository)
+        val repository = BreathingRepository(
+            dao = db.breathingSessionDao(),
+            exerciseDao = db.breathingExerciseDao(),
+            preferences = BreathingPreferences(appContext),
+            context = appContext
+        )
 
         @Suppress("UNCHECKED_CAST")
-        return myViewModel as T
+        return when {
+            modelClass.isAssignableFrom(BreathingCatalogViewModel::class.java) ->
+                BreathingCatalogViewModel(repository) as T
+            
+            modelClass.isAssignableFrom(BreathingViewModel::class.java) ->
+                BreathingViewModel(AccelerometerMotionSource(appContext), repository) as T
+
+            else -> throw IllegalArgumentException("Unknown ViewModel: ${modelClass.name}")
+        }
     }
 }
