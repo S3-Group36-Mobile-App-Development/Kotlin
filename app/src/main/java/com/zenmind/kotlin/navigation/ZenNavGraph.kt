@@ -37,12 +37,16 @@ import com.zenmind.kotlin.features.authentication.presentation.views.RegisterScr
 import com.zenmind.kotlin.features.authentication.presentation.views.WelcomeScreen
 import com.zenmind.kotlin.features.breathing.view.BreathingSessionScreen
 import com.zenmind.kotlin.features.breathing.view.BreathingCatalogScreen
+import com.zenmind.kotlin.features.panicbutton.view.SupportNetworkScreen
+import com.zenmind.kotlin.features.panicbutton.view.AddContactScreen
 import com.zenmind.kotlin.features.dailycheckin.view.DailyCheckInScreen
 import com.zenmind.kotlin.features.home.model.HomeFeature
 import com.zenmind.kotlin.features.home.view.HomeScreen
 import com.zenmind.kotlin.features.home.viewmodel.HomeViewModel
 import com.zenmind.kotlin.features.games.view.BubbleGameScreen
 import com.zenmind.kotlin.features.games.data.GameSyncScheduler
+import com.zenmind.kotlin.features.panicbutton.viewmodel.ContactViewModel
+import com.zenmind.kotlin.features.panicbutton.viewmodel.ContactViewModelFactory
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import com.zenmind.kotlin.ui.theme.ZenCream
@@ -62,6 +66,8 @@ object Routes {
     const val BREATHING = "breathing"
     const val BREATHING_CATALOG = "breathing_catalog"
     const val GAMES = "games"
+    const val PANIC = "panic"
+    const val PANIC_ADD = "panic_add"
 
     fun breathingSession(exerciseId: Int = -1) = "breathing?exerciseId=$exerciseId"
 }
@@ -219,6 +225,26 @@ fun ZenNavGraph() {
             )
         }
 
+        composable(Routes.PANIC) {
+            SupportNetworkScreen(
+                onBack = { navController.popBackStack() },
+                onAddContact = { navController.navigate(Routes.PANIC_ADD) }
+            )
+        }
+
+        composable(Routes.PANIC_ADD) {
+            val context = LocalContext.current
+            val viewModel: ContactViewModel = viewModel(
+                factory = ContactViewModelFactory(context)
+            )
+            AddContactScreen(
+                onBack = { navController.popBackStack() },
+                onSave = { contact ->
+                    viewModel.save(contact)
+                    navController.popBackStack()
+                })
+        }
+
 
         composable(Routes.WELCOME) {
 
@@ -365,6 +391,9 @@ fun ZenNavGraph() {
                         }
 
                         HomeFeature.PANIC -> {
+                            navController.navigate(
+                                Routes.PANIC
+                            )
 
                         }
 
