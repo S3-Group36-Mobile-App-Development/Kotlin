@@ -28,6 +28,7 @@ interface DailyCheckInRepository {
     suspend fun isTodayPending(): Boolean
     suspend fun saveCheckIn(mood: Mood, note: String?): SaveResult
     suspend fun syncPending(): Int
+    fun hasRecommendation(mood: Mood): Boolean
     suspend fun getRecommendedFlashcard(mood: Mood): Flashcard?
 }
 
@@ -210,12 +211,16 @@ class OfflineFirstDailyCheckInRepository(
         }
     }
 
+    private fun categoryFor(mood: Mood): String? = when (mood.name) {
+        "Ansioso" -> "Ansiedad"
+        "Estresado" -> "Estrés"
+        else -> null
+    }
+
+    override fun hasRecommendation(mood: Mood): Boolean = categoryFor(mood) != null
+
     override suspend fun getRecommendedFlashcard(mood: Mood): Flashcard? {
-        val category = when (mood.name) {
-            "Ansioso" -> "Ansiedad"
-            "Estresado" -> "Estrés"
-            else -> return null
-        }
+        val category = categoryFor(mood) ?: return null
         return try {
             var flashcards = flashcardsCache.getFlashcards(category)
             if (flashcards == null){

@@ -32,5 +32,6 @@ class FakeDailyCheckInRepository(
         return SaveResult.SYNCED
     }
 
+    override fun hasRecommendation(mood: Mood) = true
     override suspend fun getRecommendedFlashcard(mood: Mood) = FakeCheckInDataSource.flashcard
 }
