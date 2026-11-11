@@ -186,11 +186,16 @@ class OfflineFirstDailyCheckInRepository(
 
         return try {
             val response = api.saveCheckIn(auth(), CheckInRequest(mood.id, note))
-            if (response.isSuccessful || response.code() == 409) {
-                checkinDao.markSynced(id)
-                SaveResult.SYNCED
-            } else {
-                SaveResult.PENDING
+            when {
+                response.isSuccessful -> {
+                    checkinDao.markSynced(id)
+                    SaveResult.SYNCED
+                }
+                response.code() == 409 -> {
+                    checkinDao.markSynced(id)
+                    SaveResult.ALREADY_REGISTERED
+                }
+                else -> SaveResult.PENDING
             }
         } catch (e: IOException) {
             SaveResult.PENDING
