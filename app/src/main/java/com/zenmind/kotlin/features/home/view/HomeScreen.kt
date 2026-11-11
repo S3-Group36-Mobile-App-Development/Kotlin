@@ -42,6 +42,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpOffset
@@ -53,8 +54,6 @@ import com.zenmind.kotlin.features.home.model.HomeData
 import com.zenmind.kotlin.features.home.model.HomeFeature
 import com.zenmind.kotlin.features.home.model.HomeUiState
 import com.zenmind.kotlin.features.home.viewmodel.HomeViewModel
-import com.zenmind.kotlin.ui.components.ZenBottomBar
-import com.zenmind.kotlin.ui.components.ZenTab
 import com.zenmind.kotlin.ui.theme.Nunito
 import com.zenmind.kotlin.ui.theme.NunitoBold
 import com.zenmind.kotlin.ui.theme.ShortStack
@@ -73,7 +72,7 @@ fun HomeScreen(
     viewModel: HomeViewModel,
     onFeatureClick: (HomeFeature) -> Unit,
     onContinueClick: () -> Unit = {},
-    onTabClick: (ZenTab) -> Unit = {},
+    onPanicClick: () -> Unit = {},
     onLogoutClick: () -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -103,7 +102,7 @@ fun HomeScreen(
                 data = s.data,
                 onFeatureClick = onFeatureClick,
                 onContinueClick = onContinueClick,
-                onTabClick = onTabClick,
+                onPanicClick = onPanicClick,
                 onLogoutClick = onLogoutClick
             )
         }
@@ -115,22 +114,15 @@ fun HomeContent(
     data: HomeData,
     onFeatureClick: (HomeFeature) -> Unit,
     onContinueClick: () -> Unit = {},
-    onTabClick: (ZenTab) -> Unit = {},
+    onPanicClick: () -> Unit = {},
     onLogoutClick: () -> Unit = {}
 ) {
     Scaffold(
         containerColor = ZenCream,
 
-        bottomBar = {
-            ZenBottomBar(
-                selected = ZenTab.HOME,
-                onTabClick = onTabClick
-            )
-        },
-
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { onFeatureClick(HomeFeature.PANIC) },
+                onClick = onPanicClick,
                 shape = CircleShape,
                 containerColor = ZenOrange,
                 contentColor = Color.White
@@ -294,8 +286,7 @@ private fun FeatureGrid(
         modifier = Modifier.fillMaxWidth(),
         contentAlignment = Alignment.TopCenter
     ) {
-        val fitWidth = (maxWidth - spacing * (columns - 1)) / columns
-        val cardWidth = minOf(FEATURE_CARD_WIDTH, fitWidth)
+        val cardWidth = (maxWidth - spacing * (columns - 1)) / columns
 
         Column(
             verticalArrangement = Arrangement.spacedBy(18.dp),
@@ -318,7 +309,6 @@ private fun FeatureGrid(
     }
 }
 
-private val FEATURE_CARD_WIDTH = 140.dp
 
 @Composable
 private fun FeatureCard(
@@ -378,6 +368,7 @@ private fun FeatureCard(
                 text = feature.label.uppercase(),
                 style = TextStyle(
                     fontFamily = ShortStack,
+                    fontWeight = FontWeight.Bold,
                     letterSpacing = 4.sp,
                     textAlign = TextAlign.Center,
                     color = ZenLabel
