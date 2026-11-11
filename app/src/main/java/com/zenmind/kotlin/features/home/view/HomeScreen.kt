@@ -1,6 +1,5 @@
 package com.zenmind.kotlin.features.home.view
 
-import android.content.res.Configuration
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -42,7 +41,6 @@ import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
@@ -292,9 +290,7 @@ private fun CheckInCard(
 private fun FeatureGrid(
     onFeatureClick: (HomeFeature) -> Unit
 ) {
-    val isLandscape =
-        LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
-    val columns = if (isLandscape) 3 else 2
+    val columns = 2
     val spacing = 24.dp
 
     BoxWithConstraints(
@@ -302,11 +298,7 @@ private fun FeatureGrid(
         contentAlignment = Alignment.TopCenter
     ) {
         val fitWidth = (maxWidth - spacing * (columns - 1)) / columns
-        val cardWidth = if (isLandscape) {
-            minOf(FEATURE_CARD_MAX_WIDTH_LANDSCAPE, fitWidth)
-        } else {
-            minOf(FEATURE_CARD_WIDTH, fitWidth)
-        }
+        val cardWidth = minOf(FEATURE_CARD_WIDTH, fitWidth)
 
         Column(
             verticalArrangement = Arrangement.spacedBy(18.dp),
@@ -330,7 +322,6 @@ private fun FeatureGrid(
 }
 
 private val FEATURE_CARD_WIDTH = 140.dp
-private val FEATURE_CARD_MAX_WIDTH_LANDSCAPE = 200.dp
 
 @Composable
 private fun FeatureCard(
