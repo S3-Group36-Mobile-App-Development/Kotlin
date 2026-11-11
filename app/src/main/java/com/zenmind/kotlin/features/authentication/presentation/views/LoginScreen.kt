@@ -169,6 +169,10 @@ fun LoginScreen(
                     focusedBorderColor = ZenMindBrown,
                     unfocusedBorderColor = ZenMindBorder,
                     focusedLabelColor = ZenMindBrown,
+                    unfocusedLabelColor = ZenMindBrown,
+                    focusedTextColor = ZenMindBrown,
+                    unfocusedTextColor = ZenMindBrown,
+                    disabledTextColor = ZenMindBrown,
                     cursorColor = ZenMindBrown
                 )
             )
@@ -224,6 +228,10 @@ fun LoginScreen(
                     focusedBorderColor = ZenMindBrown,
                     unfocusedBorderColor = ZenMindBorder,
                     focusedLabelColor = ZenMindBrown,
+                    unfocusedLabelColor = ZenMindBrown,
+                    focusedTextColor = ZenMindBrown,
+                    unfocusedTextColor = ZenMindBrown,
+                    disabledTextColor = ZenMindBrown,
                     cursorColor = ZenMindBrown
                 )
             )

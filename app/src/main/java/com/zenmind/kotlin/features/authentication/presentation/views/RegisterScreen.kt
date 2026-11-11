@@ -167,6 +167,10 @@ fun RegisterScreen(
                     focusedBorderColor = RegisterBrown,
                     unfocusedBorderColor = RegisterBorder,
                     focusedLabelColor = RegisterBrown,
+                    unfocusedLabelColor = RegisterBrown,
+                    focusedTextColor = RegisterBrown,
+                    unfocusedTextColor = RegisterBrown,
+                    disabledTextColor = RegisterBrown,
                     cursorColor = RegisterBrown
                 )
             )
@@ -194,6 +198,10 @@ fun RegisterScreen(
                     focusedBorderColor = RegisterBrown,
                     unfocusedBorderColor = RegisterBorder,
                     focusedLabelColor = RegisterBrown,
+                    unfocusedLabelColor = RegisterBrown,
+                    focusedTextColor = RegisterBrown,
+                    unfocusedTextColor = RegisterBrown,
+                    disabledTextColor = RegisterBrown,
                     cursorColor = RegisterBrown
                 )
             )
@@ -251,6 +259,10 @@ fun RegisterScreen(
                     focusedBorderColor = RegisterBrown,
                     unfocusedBorderColor = RegisterBorder,
                     focusedLabelColor = RegisterBrown,
+                    unfocusedLabelColor = RegisterBrown,
+                    focusedTextColor = RegisterBrown,
+                    unfocusedTextColor = RegisterBrown,
+                    disabledTextColor = RegisterBrown,
                     cursorColor = RegisterBrown
                 )
             )
