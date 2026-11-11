@@ -325,7 +325,7 @@ private fun CheckInResult(
                     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(color = ZenOrange, modifier = Modifier.size(28.dp))
                     }
-                state.isOffline && mood?.name in MOODS_WITH_CARD ->
+                state.isOffline && state.cardExpected ->
                     Text(
                         "Tu card aparecerá cuando vuelvas a tener internet.",
                         fontFamily = Nunito,
@@ -452,8 +452,6 @@ private fun MoodBadge(mood: Mood) {
         Text(mood.displayName, fontFamily = NunitoBold, fontSize = 16.sp, color = ZenLabel)
     }
 }
-
-private val MOODS_WITH_CARD = setOf("Ansioso", "Estresado")
 
 @Composable
 private fun OfflineBanner(onClose: () -> Unit) {

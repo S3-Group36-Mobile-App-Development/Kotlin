@@ -78,8 +78,9 @@ class DailyCheckInViewModel(
                         moods = moods,
                         streak = streak ?: it.streak,
                         alreadyCheckedInToday = todayMood != null,
-                        selectedMoodId = todayMood?.id,
-                        recommendedFlashcard = flashcard,
+                        selectedMoodId = todayMood?.id ?: it.selectedMoodId,
+                        recommendedFlashcard = flashcard ?: it.recommendedFlashcard,
+                        cardExpected = todayMood?.let { m -> repository.hasRecommendation(m) } ?: false,
                         savedMessage = if (synced > 0) "Tu check-in pendiente se sincronizó." else it.savedMessage,
                         message = if (moods.isEmpty()) "Conéctate a internet una vez para cargar los estados de ánimo." else null
                     )
@@ -144,6 +145,7 @@ class DailyCheckInViewModel(
                         alreadyCheckedInToday = true,
                         pendingSync = result == SaveResult.PENDING,
                         isLoadingCard = true,
+                        cardExpected = repository.hasRecommendation(mood),
                         savedMessage = message,
                         message = null
                     )

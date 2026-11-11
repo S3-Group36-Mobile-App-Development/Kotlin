@@ -16,6 +16,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.json.JSONObject
 
 interface DailyCheckInRepository {
@@ -26,14 +28,13 @@ interface DailyCheckInRepository {
     suspend fun isTodayPending(): Boolean
     suspend fun saveCheckIn(mood: Mood, note: String?): SaveResult
     suspend fun syncPending(): Int
+    fun hasRecommendation(mood: Mood): Boolean
     suspend fun getRecommendedFlashcard(mood: Mood): Flashcard?
 }
 
-class AlreadyCheckedInException : Exception("Ya registraste tu check-in de hoy.")
-
 class NotLoggedInException : Exception("Inicia sesión para hacer tu check-in.")
 
-class NetworkDailyCheckInRepository(
+class OfflineFirstDailyCheckInRepository(
     private val api: CheckInApiService,
     private val tokenStorage: TokenStorage,
     private val flashcardsCache: FlashcardsCache,
@@ -44,6 +45,8 @@ class NetworkDailyCheckInRepository(
         val token = tokenStorage.getAccessToken() ?: throw NotLoggedInException()
         return "Bearer $token"
     }
+
+    private val syncMutex = Mutex()
 
     override fun isGuest(): Boolean = tokenStorage.getAccessToken() == null
 
@@ -73,16 +76,13 @@ class NetworkDailyCheckInRepository(
         if (isGuest()) return null
 
         return try {
-            val utc = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-            utc.timeZone = TimeZone.getTimeZone("UTC")
-            val today = utc.format(Date())
-
-            val todayCheckIn = api.getCheckIns(auth()).find { it.registradoEn.take(10) == today }
+            val today = localToday()
+            val todayCheckIn = api.getCheckIns(auth()).find { toLocalDate(it.registradoEn) == today }
             todayCheckIn?.let {
                 val mood = Mood(it.estadoAnimo.id.toLong(), it.estadoAnimo.nombre)
                 checkinDao.insertCheckin(
                     CheckinEntity(
-                        date = localToday(),
+                        date = today,
                         moodId = mood.id,
                         moodName = mood.name,
                         note = null,
@@ -105,8 +105,12 @@ class NetworkDailyCheckInRepository(
 
     override suspend fun syncPending(): Int {
         if (isGuest()) return 0
+        return syncMutex.withLock { sendPendingOfToday() }
+    }
+
+    private suspend fun sendPendingOfToday(): Int {
         var synced = 0
-        for (pending in checkinDao.getPending(currentUserId())) {
+        for (pending in checkinDao.getPending(currentUserId(), localToday())) {
             try {
                 val response = api.saveCheckIn(auth(), CheckInRequest(pending.moodId, pending.note))
                 if (response.isSuccessful || response.code() == 409) {
@@ -122,6 +126,17 @@ class NetworkDailyCheckInRepository(
 
     private fun localToday(): String =
         SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+
+    private fun toLocalDate(isoUtc: String): String? {
+        return try {
+            val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
+            parser.timeZone = TimeZone.getTimeZone("UTC")
+            val instant = parser.parse(isoUtc.take(19)) ?: return null
+            SimpleDateFormat("yyyy-MM-dd", Locale.US).format(instant)
+        } catch (e: Exception) {
+            null
+        }
+    }
 
     private fun streakFromDates(dates: List<String>): Streak {
         if (dates.isEmpty()) return Streak(0, 0)
@@ -158,9 +173,7 @@ class NetworkDailyCheckInRepository(
     override suspend fun saveCheckIn(mood: Mood, note: String?): SaveResult {
         val guest = tokenStorage.getAccessToken() == null
         val userId = currentUserId()
-
-        val format = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-        val today = format.format(Date())
+        val today = localToday()
 
         if (checkinDao.getByDate(today, userId) != null) {
             return SaveResult.ALREADY_REGISTERED
@@ -182,23 +195,32 @@ class NetworkDailyCheckInRepository(
 
         return try {
             val response = api.saveCheckIn(auth(), CheckInRequest(mood.id, note))
-            if (response.isSuccessful || response.code() == 409) {
-                checkinDao.markSynced(id)
-                SaveResult.SYNCED
-            } else {
-                SaveResult.PENDING
+            when {
+                response.isSuccessful -> {
+                    checkinDao.markSynced(id)
+                    SaveResult.SYNCED
+                }
+                response.code() == 409 -> {
+                    checkinDao.markSynced(id)
+                    SaveResult.ALREADY_REGISTERED
+                }
+                else -> SaveResult.PENDING
             }
         } catch (e: IOException) {
             SaveResult.PENDING
         }
     }
 
+    private fun categoryFor(mood: Mood): String? = when (mood.name) {
+        "Ansioso" -> "Ansiedad"
+        "Estresado" -> "Estrés"
+        else -> null
+    }
+
+    override fun hasRecommendation(mood: Mood): Boolean = categoryFor(mood) != null
+
     override suspend fun getRecommendedFlashcard(mood: Mood): Flashcard? {
-        val category = when (mood.name) {
-            "Ansioso" -> "Ansiedad"
-            "Estresado" -> "Estrés"
-            else -> return null
-        }
+        val category = categoryFor(mood) ?: return null
         return try {
             var flashcards = flashcardsCache.getFlashcards(category)
             if (flashcards == null){

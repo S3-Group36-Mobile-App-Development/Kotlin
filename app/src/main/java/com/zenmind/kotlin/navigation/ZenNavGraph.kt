@@ -382,34 +382,19 @@ fun ZenNavGraph() {
                     navController.navigate(Routes.DAILY_CHECKIN)
                 },
 
+                onPanicClick = {
+                    navController.navigate(Routes.PANIC)
+                },
+
                 onFeatureClick = { feature ->
 
                     when (feature) {
-
-                        HomeFeature.SUPPORT -> {
-
-                        }
-
-                        HomeFeature.PANIC -> {
-                            navController.navigate(
-                                Routes.PANIC
-                            )
-
-                        }
 
                         HomeFeature.BREATHING -> {
 
                             navController.navigate(
                                 Routes.BREATHING
                             )
-                        }
-
-                        HomeFeature.PROTOCOLS -> {
-
-                        }
-
-                        HomeFeature.FLASHCARDS -> {
-
                         }
 
                         HomeFeature.GAMES -> {
