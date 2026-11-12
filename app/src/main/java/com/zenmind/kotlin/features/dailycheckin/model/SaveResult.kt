@@ -7,4 +7,5 @@ enum class SaveResult {
     SYNCED,
     PENDING,
     GUEST,
+    LOCAL_ONLY,
 }

@@ -16,19 +16,30 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.json.JSONObject
 
 interface DailyCheckInRepository {
+    val syncEvents: SharedFlow<Int>
     fun isGuest(): Boolean
+    suspend fun getLocalMoods(): List<Mood>
+    suspend fun getLocalTodayMood(): Mood?
+    suspend fun prefetch()
     suspend fun getMoods(): List<Mood>
+    suspend fun getLocalStreak(): Streak
     suspend fun getStreak(): Streak?
     suspend fun getTodayCheckInMood(): Mood?
     suspend fun isTodayPending(): Boolean
     suspend fun saveCheckIn(mood: Mood, note: String?): SaveResult
     suspend fun syncPending(): Int
+    suspend fun getDraft(): String
+    suspend fun saveDraft(note: String)
     fun hasRecommendation(mood: Mood): Boolean
+    fun getCachedFlashcard(mood: Mood): Flashcard?
     suspend fun getRecommendedFlashcard(mood: Mood): Flashcard?
 }
 
@@ -38,9 +49,14 @@ class OfflineFirstDailyCheckInRepository(
     private val api: CheckInApiService,
     private val tokenStorage: TokenStorage,
     private val flashcardsCache: FlashcardsCache,
+    private val flashcardFile: FlashcardFileStore,
+    private val draftStore: CheckInDraftStore,
     private val checkinDao: CheckinDao,
     private val moodDao: MoodDao
 ) : DailyCheckInRepository {
+    private val _syncEvents = MutableSharedFlow<Int>(extraBufferCapacity = 1)
+    override val syncEvents: SharedFlow<Int> = _syncEvents.asSharedFlow()
+
     private fun auth(): String {
         val token = tokenStorage.getAccessToken() ?: throw NotLoggedInException()
         return "Bearer $token"
@@ -56,17 +72,50 @@ class OfflineFirstDailyCheckInRepository(
             moodDao.upsertAll(moods.map { MoodEntity(it.id, it.name) })
             moods
         } catch (e: Exception) {
-            moodDao.getAll().map { Mood(it.id, it.name) }
+            getLocalMoods()
         }
     }
 
+    override suspend fun getLocalMoods(): List<Mood> =
+        moodDao.getAll().map { Mood(it.id, it.name) }.ifEmpty { DEFAULT_MOODS }
+
+    override suspend fun getLocalTodayMood(): Mood? =
+        checkinDao.getByDate(localToday(), currentUserId())?.let { Mood(it.moodId, it.moodName) }
+
+    override suspend fun prefetch() {
+        DEFAULT_MOODS.mapNotNull { categoryFor(it) }.forEach { downloadFlashcard(it) }
+        if (isGuest()) return
+        getMoods()
+        getTodayCheckInMood()
+    }
+
+    private suspend fun resolveMoodId(moodId: Long, moodName: String): Long? {
+        if (moodId > 0) return moodId
+        val known = moodDao.getAll().ifEmpty {
+            try {
+                getMoods()
+                moodDao.getAll()
+            } catch (e: Exception) {
+                emptyList()
+            }
+        }
+        return known.find { it.name == moodName }?.id
+    }
+
+    private fun isDefinitiveRejection(code: Int): Boolean =
+        code in 400..499 && code != 401 && code != 408 && code != 429
+
+    override suspend fun getLocalStreak(): Streak =
+        streakFromDates(checkinDao.getDates(currentUserId()))
+
     override suspend fun getStreak(): Streak? {
-        if (isGuest()) return streakFromDates(checkinDao.getDates(GUEST_ID))
+        if (isGuest()) return getLocalStreak()
         return try {
             val racha = api.getProfile(auth()).racha
-            Streak(racha?.rachaActualDias ?: 0, racha?.rachaMasLargaDias ?: 0)
+            val current = if (isStreakExpired(racha?.fechaUltimoCheckin)) 0 else racha?.rachaActualDias ?: 0
+            Streak(current, racha?.rachaMasLargaDias ?: 0)
         } catch (e: Exception) {
-            null
+            getLocalStreak()
         }
     }
 
@@ -112,20 +161,32 @@ class OfflineFirstDailyCheckInRepository(
         var synced = 0
         for (pending in checkinDao.getPending(currentUserId(), localToday())) {
             try {
-                val response = api.saveCheckIn(auth(), CheckInRequest(pending.moodId, pending.note))
+                val moodId = resolveMoodId(pending.moodId, pending.moodName) ?: break
+                val response = api.saveCheckIn(auth(), CheckInRequest(moodId, pending.note))
                 if (response.isSuccessful || response.code() == 409) {
                     checkinDao.markSynced(pending.id)
                     synced++
+                } else if (isDefinitiveRejection(response.code())) {
+                    checkinDao.markSynced(pending.id)
                 }
             } catch (e: IOException) {
                 break
             }
         }
+        if (synced > 0) _syncEvents.tryEmit(synced)
         return synced
     }
 
     private fun localToday(): String =
         SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+
+    private fun isStreakExpired(lastCheckIn: String?): Boolean {
+        if (lastCheckIn == null) return false
+        val utc = SimpleDateFormat("yyyy-MM-dd", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }
+        val last = utc.parse(lastCheckIn.take(10))?.time ?: return false
+        val today = utc.parse(utc.format(Date()))?.time ?: return false
+        return (today - last) / DAY_MS > 1
+    }
 
     private fun toLocalDate(isoUtc: String): String? {
         return try {
@@ -191,10 +252,19 @@ class OfflineFirstDailyCheckInRepository(
             )
         )
 
+        draftStore.save(userId, "")
+
         if (guest) return SaveResult.GUEST
 
+        return syncMutex.withLock { sendNewCheckIn(id, mood, note) }
+    }
+
+    private suspend fun sendNewCheckIn(id: Long, mood: Mood, note: String?): SaveResult {
+        if (checkinDao.getByDate(localToday(), currentUserId())?.synced == true) return SaveResult.SYNCED
+        val moodId = resolveMoodId(mood.id, mood.name) ?: return SaveResult.PENDING
+
         return try {
-            val response = api.saveCheckIn(auth(), CheckInRequest(mood.id, note))
+            val response = api.saveCheckIn(auth(), CheckInRequest(moodId, note))
             when {
                 response.isSuccessful -> {
                     checkinDao.markSynced(id)
@@ -203,6 +273,10 @@ class OfflineFirstDailyCheckInRepository(
                 response.code() == 409 -> {
                     checkinDao.markSynced(id)
                     SaveResult.ALREADY_REGISTERED
+                }
+                isDefinitiveRejection(response.code()) -> {
+                    checkinDao.markSynced(id)
+                    SaveResult.LOCAL_ONLY
                 }
                 else -> SaveResult.PENDING
             }
@@ -217,23 +291,31 @@ class OfflineFirstDailyCheckInRepository(
         else -> null
     }
 
+    override suspend fun getDraft(): String = draftStore.read(currentUserId())
+
+    override suspend fun saveDraft(note: String) = draftStore.save(currentUserId(), note)
+
     override fun hasRecommendation(mood: Mood): Boolean = categoryFor(mood) != null
+
+    override fun getCachedFlashcard(mood: Mood): Flashcard? {
+        val category = categoryFor(mood) ?: return null
+        return flashcardsCache.getFlashcards(category)?.firstOrNull() ?: flashcardFile.read(category)
+    }
 
     override suspend fun getRecommendedFlashcard(mood: Mood): Flashcard? {
         val category = categoryFor(mood) ?: return null
+        return getCachedFlashcard(mood) ?: downloadFlashcard(category)
+    }
+
+    private suspend fun downloadFlashcard(category: String): Flashcard? {
         return try {
-            var flashcards = flashcardsCache.getFlashcards(category)
-            if (flashcards == null){
-                Log.d("FlashcardsCache", "Fetching from Network")
-                flashcards = api.getFlashcards(category).map { Flashcard(it.categoria, it.contenido)  }
-                if (flashcards.isNotEmpty()){
-                    flashcardsCache.saveFlashcards(category, flashcards)
-                }
-            } else {
-                Log.d("FlashcardsCache", "Fetching from the cache")
+            val flashcards = api.getFlashcards(category).map { Flashcard(it.categoria, it.contenido) }
+            if (flashcards.isNotEmpty()) {
+                flashcardsCache.saveFlashcards(category, flashcards)
+                flashcardFile.save(category, flashcards.first())
             }
             flashcards.firstOrNull()
-        } catch (e: Exception){
+        } catch (e: Exception) {
             Log.e("FlashcardsCache", "No se pudo obtener la flashcard de $category", e)
             null
         }
@@ -242,5 +324,13 @@ class OfflineFirstDailyCheckInRepository(
     private companion object {
         const val GUEST_ID = "guest"
         const val DAY_MS = 24L * 60 * 60 * 1000
+
+        val DEFAULT_MOODS = listOf(
+            Mood(-1, "Feliz"),
+            Mood(-2, "Tranquilo"),
+            Mood(-3, "Ansioso"),
+            Mood(-4, "Triste"),
+            Mood(-5, "Estresado")
+        )
     }
 }

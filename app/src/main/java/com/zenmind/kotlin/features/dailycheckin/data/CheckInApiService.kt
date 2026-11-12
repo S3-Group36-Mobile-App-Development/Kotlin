@@ -30,7 +30,7 @@ interface CheckInApiService {
 
 data class MoodDto(val id: String, val nombre: String)
 
-data class StreakDto(val rachaActualDias: Int, val rachaMasLargaDias: Int)
+data class StreakDto(val rachaActualDias: Int, val rachaMasLargaDias: Int, val fechaUltimoCheckin: String?)
 
 data class ProfileDto(val racha: StreakDto?)
 

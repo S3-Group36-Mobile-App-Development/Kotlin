@@ -369,9 +369,6 @@ private fun CheckInResult(
         } else if (state.pendingSync) {
             NoticeBanner("Pendiente de sincronizar: se enviará cuando vuelvas a tener internet.")
         }
-        if (state.streak == null && state.isOffline) {
-            NoticeBanner("Tu racha aparecerá cuando vuelvas a tener internet.")
-        }
     }
 }
 

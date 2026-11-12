@@ -10,7 +10,9 @@ import com.zenmind.kotlin.core.storage.TokenStorage
 import com.zenmind.kotlin.core.telemetry.TelemetryApiService
 import com.zenmind.kotlin.core.telemetry.TelemetryRepository
 import com.zenmind.kotlin.features.dailycheckin.data.CheckInApiService
+import com.zenmind.kotlin.features.dailycheckin.data.CheckInDraftStore
 import com.zenmind.kotlin.features.dailycheckin.data.DailyCheckInRepository
+import com.zenmind.kotlin.features.dailycheckin.data.FlashcardFileStore
 import com.zenmind.kotlin.features.dailycheckin.data.FlashcardsCache
 import com.zenmind.kotlin.features.dailycheckin.data.OfflineFirstDailyCheckInRepository
 import com.zenmind.kotlin.features.home.data.HomeApiService
@@ -62,6 +64,8 @@ class DefaultAppContainer(
             checkInApi,
             tokenStorage,
             flashcardsCache,
+            FlashcardFileStore(context.filesDir),
+            CheckInDraftStore(context),
             database.getCheckinDao(),
             database.getMoodDao()
         )
@@ -73,6 +77,15 @@ class DefaultAppContainer(
 
     init {
         applicationScope.launch {
+            dailyCheckInRepository.syncEvents.collect { count ->
+                telemetryRepository.featureUse(
+                    "checkin",
+                    mapOf("accion" to "sincronizado", "cantidad" to count.toString())
+                )
+            }
+        }
+
+        applicationScope.launch {
             connectivityObserver.onlineFlow.collect { online ->
                 if (online) {
                     applicationScope.launch {
@@ -80,7 +93,13 @@ class DefaultAppContainer(
                         catch (e: CancellationException) { throw e }
                         catch (_: Exception) { /* The next connection or login can enqueue again. */ }
                     }
-                    runCatching { dailyCheckInRepository.syncPending() }
+                    try {
+                        dailyCheckInRepository.syncPending()
+                        dailyCheckInRepository.prefetch()
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (_: Exception) {
+                    }
                 }
             }
         }
