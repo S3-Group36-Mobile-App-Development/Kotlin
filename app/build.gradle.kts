@@ -70,6 +70,8 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
 
+    implementation(libs.androidx.datastore.preferences)
+
     implementation("androidx.compose.material:material-icons-extended")
 
     testImplementation(libs.junit)
