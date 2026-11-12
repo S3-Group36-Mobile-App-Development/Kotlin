@@ -25,15 +25,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.outlined.Phone
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,12 +44,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.zenmind.kotlin.R
-import com.zenmind.kotlin.features.home.model.HomeData
 import com.zenmind.kotlin.features.home.model.HomeFeature
-import com.zenmind.kotlin.features.home.model.HomeUiState
-import com.zenmind.kotlin.features.home.viewmodel.HomeViewModel
 import com.zenmind.kotlin.ui.theme.Nunito
 import com.zenmind.kotlin.ui.theme.NunitoBold
 import com.zenmind.kotlin.ui.theme.ShortStack
@@ -69,49 +61,6 @@ import com.zenmind.kotlin.ui.theme.ZenText
 
 @Composable
 fun HomeScreen(
-    viewModel: HomeViewModel,
-    onFeatureClick: (HomeFeature) -> Unit,
-    onContinueClick: () -> Unit = {},
-    onPanicClick: () -> Unit = {},
-    onLogoutClick: () -> Unit = {}
-) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
-
-    when (val s = state) {
-
-        HomeUiState.Loading -> {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(ZenCream),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(color = ZenOrange)
-            }
-        }
-
-        is HomeUiState.Error -> {
-            HomeError(
-                message = s.message,
-                onRetry = viewModel::load
-            )
-        }
-
-        is HomeUiState.Success -> {
-            HomeContent(
-                data = s.data,
-                onFeatureClick = onFeatureClick,
-                onContinueClick = onContinueClick,
-                onPanicClick = onPanicClick,
-                onLogoutClick = onLogoutClick
-            )
-        }
-    }
-}
-
-@Composable
-fun HomeContent(
-    data: HomeData,
     onFeatureClick: (HomeFeature) -> Unit,
     onContinueClick: () -> Unit = {},
     onPanicClick: () -> Unit = {},
@@ -378,52 +327,6 @@ private fun FeatureCard(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(start = 8.dp, end = 8.dp, bottom = 12.dp)
-            )
-        }
-    }
-}
-
-@Composable
-private fun HomeError(
-    message: String,
-    onRetry: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(ZenCream)
-            .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment =
-            Alignment.CenterHorizontally
-    ) {
-
-        Text(
-            text = "No pudimos conectarnos",
-            fontFamily = ShortStack,
-            fontSize = 18.sp,
-            color = ZenText
-        )
-
-        Text(
-            text = message,
-            fontFamily = Nunito,
-            fontSize = 14.sp,
-            color = ZenText
-        )
-
-        Spacer(
-            modifier = Modifier.height(16.dp)
-        )
-
-        Button(
-            onClick = onRetry,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = ZenOrange
-            )
-        ) {
-            Text(
-                text = "Reintentar"
             )
         }
     }

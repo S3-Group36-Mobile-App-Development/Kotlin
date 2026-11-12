@@ -20,7 +20,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -42,7 +44,6 @@ import com.zenmind.kotlin.features.panicbutton.view.AddContactScreen
 import com.zenmind.kotlin.features.dailycheckin.view.DailyCheckInScreen
 import com.zenmind.kotlin.features.home.model.HomeFeature
 import com.zenmind.kotlin.features.home.view.HomeScreen
-import com.zenmind.kotlin.features.home.viewmodel.HomeViewModel
 import com.zenmind.kotlin.features.games.view.BubbleGameScreen
 import com.zenmind.kotlin.features.games.data.GameSyncScheduler
 import com.zenmind.kotlin.features.panicbutton.viewmodel.ContactViewModel
@@ -214,34 +215,38 @@ fun ZenNavGraph() {
             }
         }
 
-        composable(Routes.BREATHING_CATALOG) {
+        composable(Routes.BREATHING_CATALOG) { entry ->
             BreathingCatalogScreen(
-                onBack = { navController.popBackStack() },
+                onBack = { if (entry.isResumed()) navController.popBackStack() },
                 onSelect = { exercise ->
-                    navController.navigate(Routes.breathingSession(exercise.id)) {
-                        popUpTo(Routes.BREATHING_CATALOG) { inclusive = true }
+                    if (entry.isResumed()) {
+                        navController.navigate(Routes.breathingSession(exercise.id)) {
+                            popUpTo(Routes.BREATHING_CATALOG) { inclusive = true }
+                        }
                     }
                 }
             )
         }
 
-        composable(Routes.PANIC) {
+        composable(Routes.PANIC) { entry ->
             SupportNetworkScreen(
-                onBack = { navController.popBackStack() },
-                onAddContact = { navController.navigate(Routes.PANIC_ADD) }
+                onBack = { if (entry.isResumed()) navController.popBackStack() },
+                onAddContact = { if (entry.isResumed()) navController.navigate(Routes.PANIC_ADD) }
             )
         }
 
-        composable(Routes.PANIC_ADD) {
+        composable(Routes.PANIC_ADD) { entry ->
             val context = LocalContext.current
             val viewModel: ContactViewModel = viewModel(
                 factory = ContactViewModelFactory(context)
             )
             AddContactScreen(
-                onBack = { navController.popBackStack() },
+                onBack = { if (entry.isResumed()) navController.popBackStack() },
                 onSave = { contact ->
-                    viewModel.save(contact)
-                    navController.popBackStack()
+                    if (entry.isResumed()) {
+                        viewModel.save(contact)
+                        navController.popBackStack()
+                    }
                 })
         }
 
@@ -350,14 +355,9 @@ fun ZenNavGraph() {
             )
         }
 
-        composable(Routes.HOME) {
-
-            val homeViewModel: HomeViewModel = viewModel(
-                factory = HomeViewModel.Factory
-            )
+        composable(Routes.HOME) { entry ->
 
             HomeScreen(
-                viewModel = homeViewModel,
 
                 onLogoutClick = {
 
@@ -378,41 +378,32 @@ fun ZenNavGraph() {
                 },
 
                 onContinueClick = {
-
-                    navController.navigate(Routes.DAILY_CHECKIN)
+                    if (entry.isResumed()) navController.navigate(Routes.DAILY_CHECKIN)
                 },
 
                 onPanicClick = {
-                    navController.navigate(Routes.PANIC)
+                    if (entry.isResumed()) navController.navigate(Routes.PANIC)
                 },
 
                 onFeatureClick = { feature ->
-
-                    when (feature) {
-
-                        HomeFeature.BREATHING -> {
-
-                            navController.navigate(
-                                Routes.BREATHING
-                            )
-                        }
-
-                        HomeFeature.GAMES -> {
-                            navController.navigate(Routes.GAMES)
+                    if (entry.isResumed()) {
+                        when (feature) {
+                            HomeFeature.BREATHING -> navController.navigate(Routes.BREATHING)
+                            HomeFeature.GAMES -> navController.navigate(Routes.GAMES)
                         }
                     }
                 }
             )
         }
 
-        composable(Routes.DAILY_CHECKIN) {
+        composable(Routes.DAILY_CHECKIN) { entry ->
 
             DailyCheckInScreen(
                 onBack = {
-                    navController.popBackStack()
+                    if (entry.isResumed()) navController.popBackStack()
                 },
                 onGoToBreathing = {
-                    navController.navigate(Routes.BREATHING)
+                    if (entry.isResumed()) navController.navigate(Routes.BREATHING)
                 }
             )
         }
@@ -429,14 +420,17 @@ fun ZenNavGraph() {
             val exerciseId = backStackEntry.arguments?.getInt("exerciseId") ?: -1
             BreathingSessionScreen(
                 exerciseId = exerciseId,
-                onBack = { navController.popBackStack() },
-                onOpenCatalog = { navController.navigate(Routes.BREATHING_CATALOG)}
+                onBack = { if (backStackEntry.isResumed()) navController.popBackStack() },
+                onOpenCatalog = { if (backStackEntry.isResumed()) navController.navigate(Routes.BREATHING_CATALOG) }
             )
         }
 
-        composable(Routes.GAMES) {
-            BubbleGameScreen(onBack = { navController.popBackStack() })
+        composable(Routes.GAMES) { entry ->
+            BubbleGameScreen(onBack = { if (entry.isResumed()) navController.popBackStack() })
         }
 
     }
 }
+
+private fun NavBackStackEntry.isResumed(): Boolean =
+    lifecycle.currentState == Lifecycle.State.RESUMED
