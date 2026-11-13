@@ -16,9 +16,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import org.json.JSONObject
+import retrofit2.HttpException
 
 interface DailyCheckInRepository {
     fun isGuest(): Boolean
@@ -27,12 +26,10 @@ interface DailyCheckInRepository {
     suspend fun getTodayCheckInMood(): Mood?
     suspend fun isTodayPending(): Boolean
     suspend fun saveCheckIn(mood: Mood, note: String?): SaveResult
-    suspend fun syncPending(): Int
+    suspend fun syncPending(): Boolean
     fun hasRecommendation(mood: Mood): Boolean
     suspend fun getRecommendedFlashcard(mood: Mood): Flashcard?
 }
-
-class NotLoggedInException : Exception("Inicia sesión para hacer tu check-in.")
 
 class OfflineFirstDailyCheckInRepository(
     private val api: CheckInApiService,
@@ -41,23 +38,22 @@ class OfflineFirstDailyCheckInRepository(
     private val checkinDao: CheckinDao,
     private val moodDao: MoodDao
 ) : DailyCheckInRepository {
-    private fun auth(): String {
-        val token = tokenStorage.getAccessToken() ?: throw NotLoggedInException()
-        return "Bearer $token"
-    }
+    private fun auth(): String =
+        "Bearer ${checkNotNull(tokenStorage.getAccessToken())}"
 
-    private val syncMutex = Mutex()
 
     override fun isGuest(): Boolean = tokenStorage.getAccessToken() == null
 
     override suspend fun getMoods(): List<Mood> {
-        return try {
-            val moods = api.getMoods().map { Mood(it.id.toLong(), it.nombre) }
-            moodDao.upsertAll(moods.map { MoodEntity(it.id, it.name) })
-            moods
+        try {
+            val remote = api.getMoods()
+            if (remote.isNotEmpty()) {
+                moodDao.replaceAll(remote.map { MoodEntity(it.id.toLong(), it.nombre, it.orden) })
+            }
         } catch (e: Exception) {
-            moodDao.getAll().map { Mood(it.id, it.name) }
+            Log.w("DailyCheckIn", "No se pudieron actualizar los estados de ánimo", e)
         }
+        return moodDao.getAll().map { Mood(it.id, it.name) }
     }
 
     override suspend fun getStreak(): Streak? {
@@ -77,17 +73,15 @@ class OfflineFirstDailyCheckInRepository(
 
         return try {
             val today = localToday()
-            val todayCheckIn = api.getCheckIns(auth()).find { toLocalDate(it.registradoEn) == today }
-            todayCheckIn?.let {
+            todayOnServer()?.let {
                 val mood = Mood(it.estadoAnimo.id.toLong(), it.estadoAnimo.nombre)
                 checkinDao.insertCheckin(
                     CheckinEntity(
                         date = today,
                         moodId = mood.id,
                         moodName = mood.name,
-                        note = null,
+                        note = it.comentario,
                         synced = true,
-                        isGuest = false,
                         userId = userId
                     )
                 )
@@ -98,30 +92,50 @@ class OfflineFirstDailyCheckInRepository(
         }
     }
 
+    private suspend fun todayOnServer(): CheckInDto? {
+        val today = localToday()
+        return api.getCheckIns(auth()).find { toLocalDate(it.registradoEn) == today }
+    }
+
+    private suspend fun keepServerCheckIn(id: Long) {
+        val server = try {
+            todayOnServer()
+        } catch (e: HttpException) {
+            null
+        }
+        if (server == null) {
+            checkinDao.markSynced(id)
+        } else {
+            checkinDao.replaceWithServer(id, server.estadoAnimo.id.toLong(), server.estadoAnimo.nombre, server.comentario)
+        }
+    }
+
     override suspend fun isTodayPending(): Boolean {
         if (isGuest()) return false
         return checkinDao.getByDate(localToday(), currentUserId())?.synced == false
     }
 
-    override suspend fun syncPending(): Int {
-        if (isGuest()) return 0
-        return syncMutex.withLock { sendPendingOfToday() }
-    }
+    override suspend fun syncPending(): Boolean {
+        if (isGuest()) return false
+        val checkin = checkinDao.getByDate(localToday(), currentUserId()) ?: return false
+        if (checkin.synced) return false
 
-    private suspend fun sendPendingOfToday(): Int {
-        var synced = 0
-        for (pending in checkinDao.getPending(currentUserId(), localToday())) {
-            try {
-                val response = api.saveCheckIn(auth(), CheckInRequest(pending.moodId, pending.note))
-                if (response.isSuccessful || response.code() == 409) {
-                    checkinDao.markSynced(pending.id)
-                    synced++
+        return try {
+            val response = api.saveCheckIn(auth(), CheckInRequest(checkin.moodId, checkin.note))
+            when {
+                response.isSuccessful -> {
+                    checkinDao.markSynced(checkin.id)
+                    true
                 }
-            } catch (e: IOException) {
-                break
+                response.code() == 409 -> {
+                    keepServerCheckIn(checkin.id)
+                    true
+                }
+                else -> false
             }
+        } catch (e: IOException) {
+            false
         }
-        return synced
     }
 
     private fun localToday(): String =
@@ -171,7 +185,6 @@ class OfflineFirstDailyCheckInRepository(
     }
 
     override suspend fun saveCheckIn(mood: Mood, note: String?): SaveResult {
-        val guest = tokenStorage.getAccessToken() == null
         val userId = currentUserId()
         val today = localToday()
 
@@ -186,12 +199,11 @@ class OfflineFirstDailyCheckInRepository(
                 moodName = mood.name,
                 note = note,
                 synced = false,
-                isGuest = guest,
                 userId = userId
             )
         )
 
-        if (guest) return SaveResult.GUEST
+        if (isGuest()) return SaveResult.GUEST
 
         return try {
             val response = api.saveCheckIn(auth(), CheckInRequest(mood.id, note))
@@ -201,7 +213,7 @@ class OfflineFirstDailyCheckInRepository(
                     SaveResult.SYNCED
                 }
                 response.code() == 409 -> {
-                    checkinDao.markSynced(id)
+                    keepServerCheckIn(id)
                     SaveResult.ALREADY_REGISTERED
                 }
                 else -> SaveResult.PENDING
