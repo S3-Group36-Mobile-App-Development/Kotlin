@@ -6,5 +6,6 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "mood_table")
 data class MoodEntity(
     @PrimaryKey val id: Long,
-    val name: String
+    val name: String,
+    val sortOrder: Int
 )

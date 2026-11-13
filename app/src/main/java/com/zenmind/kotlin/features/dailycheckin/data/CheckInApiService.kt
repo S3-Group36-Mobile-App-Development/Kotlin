@@ -28,13 +28,13 @@ interface CheckInApiService {
     suspend fun getFlashcards(@Query("categoria") category: String): List<FlashcardDto>
 }
 
-data class MoodDto(val id: String, val nombre: String)
+data class MoodDto(val id: String, val nombre: String, val orden: Int)
 
 data class StreakDto(val rachaActualDias: Int, val rachaMasLargaDias: Int)
 
 data class ProfileDto(val racha: StreakDto?)
 
-data class CheckInDto(val registradoEn: String, val estadoAnimo: MoodDto)
+data class CheckInDto(val registradoEn: String, val estadoAnimo: MoodDto, val comentario: String?)
 
 data class CheckInRequest(val estadoAnimoId: Long, val comentario: String?)
 
