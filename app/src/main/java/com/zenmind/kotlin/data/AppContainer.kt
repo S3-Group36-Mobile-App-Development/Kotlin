@@ -13,14 +13,10 @@ import com.zenmind.kotlin.features.dailycheckin.data.CheckInApiService
 import com.zenmind.kotlin.features.dailycheckin.data.DailyCheckInRepository
 import com.zenmind.kotlin.features.dailycheckin.data.FlashcardsCache
 import com.zenmind.kotlin.features.dailycheckin.data.OfflineFirstDailyCheckInRepository
-import com.zenmind.kotlin.features.home.data.HomeApiService
-import com.zenmind.kotlin.features.home.data.HomeRepository
-import com.zenmind.kotlin.features.home.data.NetworkHomeRepository
 import com.zenmind.kotlin.features.games.data.GameSyncScheduler
 import kotlinx.coroutines.CancellationException
 
 interface AppContainer {
-    val homeRepository: HomeRepository
     val dailyCheckInRepository: DailyCheckInRepository
     val telemetryRepository: TelemetryRepository
     val connectivityObserver: ConnectivityObserver
@@ -43,14 +39,6 @@ class DefaultAppContainer(
 
     private val checkInApi: CheckInApiService by lazy {
         ApiClient.retrofit.create(CheckInApiService::class.java)
-    }
-
-    private val homeApi: HomeApiService by lazy {
-        ApiClient.retrofit.create(HomeApiService::class.java)
-    }
-
-    override val homeRepository: HomeRepository by lazy {
-        NetworkHomeRepository(homeApi, tokenStorage)
     }
 
     private val flashcardsCache: FlashcardsCache by lazy {
