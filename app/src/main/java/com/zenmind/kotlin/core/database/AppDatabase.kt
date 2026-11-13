@@ -45,6 +45,13 @@ val MIGRATION_5_6 = object : Migration(5, 6) {
     }
 }
 
+val MIGRATION_6_7 = object : Migration(6, 7) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `checkin_table` DROP COLUMN `isGuest`")
+        db.execSQL("ALTER TABLE `mood_table` ADD COLUMN `sortOrder` INTEGER NOT NULL DEFAULT 0")
+    }
+}
+
 @Database(
     entities = [
         CheckinEntity::class, 
@@ -53,7 +60,7 @@ val MIGRATION_5_6 = object : Migration(5, 6) {
         BreathingExerciseEntity::class,
         GameSessionEntity::class,
         ContactEntity::class],
-    version = 6,
+    version = 7,
     exportSchema = false
     )
 abstract class AppDatabase : RoomDatabase() {
@@ -75,7 +82,7 @@ abstract class AppDatabase : RoomDatabase() {
                 synchronized(this) {
                     if (instance == null) {
                         instance = Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "zenmind_db")
-                            .addMigrations(MIGRATION_4_5, MIGRATION_5_6)
+                            .addMigrations(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
                             .build()
                     }
                 }

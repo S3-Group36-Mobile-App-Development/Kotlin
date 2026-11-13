@@ -13,12 +13,12 @@ interface CheckinDao {
     @Query("SELECT * FROM checkin_table WHERE date = :date AND userId = :userId LIMIT 1")
     suspend fun getByDate(date: String, userId: String): CheckinEntity?
 
-    @Query("SELECT * FROM checkin_table WHERE synced = 0 AND isGuest = 0 AND userId = :userId AND date = :date ORDER BY id")
-    suspend fun getPending(userId: String, date: String): List<CheckinEntity>
-
     @Query("SELECT DISTINCT date FROM checkin_table WHERE userId = :userId ORDER BY date DESC")
     suspend fun getDates(userId: String): List<String>
 
     @Query("UPDATE checkin_table SET synced = 1 WHERE id = :id")
     suspend fun markSynced(id: Long)
+
+    @Query("UPDATE checkin_table SET moodId = :moodId, moodName = :moodName, note = :note, synced = 1 WHERE id = :id")
+    suspend fun replaceWithServer(id: Long, moodId: Long, moodName: String, note: String?)
 }
