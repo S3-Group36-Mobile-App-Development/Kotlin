@@ -18,7 +18,6 @@ data class GameState(
     val displayMs: Long = 0L
 )
 
-/** Local game rules; all coordinates and sizes are in dp. */
 class BubbleGame(
     private val clock: () -> Long,
     private val random: Random = Random.Default
@@ -77,7 +76,6 @@ class BubbleGame(
 
     fun tick() {
         if (state.phase == GamePhase.Running) {
-            // Display only; pause and finish calculate against the original start time.
             state = state.copy(displayMs = state.elapsedMs + (clock() - startedAt).coerceAtLeast(0))
         }
     }
@@ -110,8 +108,6 @@ class BubbleGame(
             }) {
             cells.add(cells.removeAt(0))
         }
-        // Each bubble stays inside its own cell, but its offset is randomized.
-        // This keeps the field less grid-like without relying on collision retries.
         val inset = 4f
         return numbers.mapIndexed { index, number ->
             val cell = cells[index]

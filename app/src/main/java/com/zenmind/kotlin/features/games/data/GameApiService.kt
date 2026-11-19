@@ -18,7 +18,6 @@ fun GameSessionEntity.toRequest() = GameSessionRequest(id, durationMs, errors, c
 
 data class GameSessionAck(val id: String?)
 
-// The server also returns createdAt and usuarioId; they are never sent in the POST.
 data class RemoteGameSession(
     val id: String?,
     val usuarioId: String?,

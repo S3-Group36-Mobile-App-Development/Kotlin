@@ -75,7 +75,7 @@ class BubbleGameViewModel(
                     applicationScope.launch {
                         try { GameSyncScheduler.enqueuePending(applicationContext) }
                         catch (e: CancellationException) { throw e }
-                        catch (_: Exception) { /* The local history remains available. */ }
+                        catch (_: Exception) { }
                     }
                     syncJob = viewModelScope.launch {
                         GameSyncScheduler.running(applicationContext, owner).collect { running ->
@@ -141,7 +141,6 @@ class BubbleGameViewModel(
     private fun savePending() {
         val session = pendingSession ?: return
         _records.value = _records.value.copy(saveStatus = SaveStatus.Saving, message = null)
-        // The write belongs to the app, not the screen: leaving Home must not cancel it.
         val write = applicationScope.async {
             repository.save(session)
             if (!session.isGuest) {
@@ -152,9 +151,7 @@ class BubbleGameViewModel(
                     }
                 } catch (e: CancellationException) {
                     throw e
-                } catch (_: Exception) {
-                    // A failed enqueue cannot undo the completed local write.
-                }
+                } catch (_: Exception) { }
             }
         }
         viewModelScope.launch {

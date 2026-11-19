@@ -41,7 +41,6 @@ class GameSessionRecordTest {
             completedSession(GameState(phase = GamePhase.Running), GameOwner.Guest)
             throw AssertionError("Unfinished game was accepted")
         } catch (_: IllegalArgumentException) {
-            // Only a finished game can be stored.
         }
     }
 }

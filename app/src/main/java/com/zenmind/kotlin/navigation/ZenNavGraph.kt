@@ -84,7 +84,7 @@ fun ZenNavGraph() {
         app.applicationScope.launch {
             try { GameSyncScheduler.enqueuePending(app, reauthenticated = true) }
             catch (e: CancellationException) { throw e }
-            catch (_: Exception) { /* The next connection can enqueue pending games. */ }
+            catch (_: Exception) { }
         }
     }
     val googleSignInService = remember { GoogleSignInService() }

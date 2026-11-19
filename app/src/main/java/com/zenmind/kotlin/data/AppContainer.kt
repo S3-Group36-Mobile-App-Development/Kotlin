@@ -66,7 +66,7 @@ class DefaultAppContainer(
                     applicationScope.launch {
                         try { GameSyncScheduler.enqueuePending(context) }
                         catch (e: CancellationException) { throw e }
-                        catch (_: Exception) { /* The next connection or login can enqueue again. */ }
+                        catch (_: Exception) { }
                     }
                     runCatching { dailyCheckInRepository.syncPending() }
                 }

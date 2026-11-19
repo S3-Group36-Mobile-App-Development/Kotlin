@@ -7,7 +7,6 @@ import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/** Imports only sessions confirmed by the authenticated GET for the same owner. */
 class GameHistoryRefresher(
     private val dao: GameSessionDao,
     private val api: GameApiService,

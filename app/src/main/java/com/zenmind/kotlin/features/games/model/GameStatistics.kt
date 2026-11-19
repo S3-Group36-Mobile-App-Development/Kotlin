@@ -11,7 +11,6 @@ data class GameStatistics(
     val accuracy: Double = 0.0
 )
 
-/** Pure CPU aggregation; the caller selects Dispatchers.Default for nontrivial histories. */
 fun calculateGameStatistics(history: List<GameSessionEntity>, owner: GameOwner): GameStatistics {
     val games = history.asSequence()
         .filter { it.ownerId == owner.id && it.isGuest == owner.isGuest }

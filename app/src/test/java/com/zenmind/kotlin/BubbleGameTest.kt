@@ -57,7 +57,7 @@ class BubbleGameTest {
             }
         }
 
-        game.tap(7) // Accidental double tap within 250 ms.
+        game.tap(7)
         assertEquals(1, game.state.errors)
         now += 300
         game.tap(7)
@@ -85,7 +85,7 @@ class BubbleGameTest {
         for (number in 1..20) {
             now += 100
             game.tap(number)
-            game.tap(number) // A bubble that was removed cannot be counted twice.
+            game.tap(number)
         }
         assertEquals(GamePhase.Finished, game.state.phase)
         assertEquals(20, game.state.correctTaps)
@@ -112,7 +112,7 @@ class BubbleGameTest {
         game.tap(1)
         assertEquals(1_000L, game.state.displayMs)
         assertEquals(1, game.state.correctTaps)
-        game.start() // An accidental second start while running must not erase progress.
+        game.start()
         assertEquals(1, game.state.correctTaps)
         game.pause()
         game.start()

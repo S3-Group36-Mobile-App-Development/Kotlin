@@ -27,7 +27,6 @@ class GameDatabaseMigrationTest {
         context.deleteDatabase(name)
         val old = context.openOrCreateDatabase(name, Context.MODE_PRIVATE, null)
         try {
-            // Version 4 tables as declared by the existing Room entities.
             old.execSQL("""CREATE TABLE `checkin_table` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                 `date` TEXT NOT NULL, `moodId` INTEGER NOT NULL, `moodName` TEXT NOT NULL,
                 `note` TEXT, `synced` INTEGER NOT NULL, `isGuest` INTEGER NOT NULL,
@@ -109,7 +108,6 @@ class GameDatabaseMigrationTest {
             ownerFromToken("invalid")
             throw AssertionError("A malformed token cannot select an account")
         } catch (_: IllegalStateException) {
-            // A broken token is not allowed to claim another account's games.
         }
     }
 }

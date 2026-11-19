@@ -52,7 +52,6 @@ class GameSessionRepository(
     }
 
     suspend fun save(session: GameSessionEntity) = withContext(Dispatchers.IO) {
-        // The UUID is stable for this completion; a retry cannot create a second row.
         if (dao.insert(session) == -1L && dao.byId(session.id) != session) {
             throw IllegalStateException("Este identificador ya corresponde a otra partida.")
         }

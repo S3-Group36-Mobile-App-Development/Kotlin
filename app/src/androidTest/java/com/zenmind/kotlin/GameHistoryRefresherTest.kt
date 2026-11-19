@@ -51,12 +51,12 @@ class GameHistoryRefresherTest {
             assertTrue(dao.forOwner("7", false).isEmpty())
             assertEquals(listOf("Bearer token-42"), api.headers)
 
-            assertTrue(refresher.refresh(owner)) // Same server history cannot create duplicate IDs.
+            assertTrue(refresher.refresh(owner))
             assertEquals(2, dao.forOwner(owner.id, false).size)
 
             api.reply = { Response.error(503, "unavailable".toResponseBody()) }
             assertFalse(refresher.refresh(owner))
-            assertEquals(2, dao.forOwner(owner.id, false).size) // Offline/cache remains intact.
+            assertEquals(2, dao.forOwner(owner.id, false).size)
 
             identity = GameSessionAuth(GameOwner("7", false), "token-7")
             assertFalse(refresher.refresh(owner))

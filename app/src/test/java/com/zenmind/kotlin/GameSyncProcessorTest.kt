@@ -40,7 +40,7 @@ class GameSyncProcessorTest {
         assertEquals(listOf("first", "first"), api.requests.map { it.id })
         assertEquals(listOf("Bearer access-42", "Bearer access-42"), api.headers)
         assertEquals(GameSyncStatus.SYNCED, dao.sessions.single().syncStatus)
-        assertEquals(1, dao.sessions.size) // Local history is retained.
+        assertEquals(1, dao.sessions.size)
         val fields = Gson().toJsonTree(api.requests.last()).asJsonObject.keySet()
         assertEquals(setOf("id", "durationMs", "errors", "correctTaps", "completedAt"), fields)
     }

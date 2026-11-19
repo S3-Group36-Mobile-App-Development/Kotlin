@@ -82,8 +82,6 @@ fun BubbleGameScreen(
     }
 
     BoxWithConstraints(Modifier.fillMaxSize().background(ZenCream).safeDrawingPadding()) {
-        // Insets are applied before measuring the playable height. On shorter
-        // screens the field keeps its minimum size and the content can scroll.
         val boardHeight = (maxHeight - if (state.phase == GamePhase.Running || state.phase == GamePhase.Paused) 185.dp else 80.dp)
             .coerceAtLeast(320.dp)
         Column(
