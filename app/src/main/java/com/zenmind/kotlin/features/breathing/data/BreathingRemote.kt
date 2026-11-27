@@ -20,12 +20,18 @@ import retrofit2.http.Body
 import retrofit2.http.Header
 import retrofit2.http.PATCH
 import retrofit2.http.POST
+import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.GET
 import java.util.concurrent.TimeUnit
 
-data class CrearSesionRequest(val ejercicioId: Int)
+data class CrearSesionRequest(val ejercicioId: Any)
 data class SesionResponse(val id: Int)
+data class UpdateExerciseRequest(
+    val usageCount: Int,
+    val ratingCount: Int,
+    val ratingAvg: String
+)
 
 data class PatronDto (
     val inhalar: Int? = null,
@@ -62,6 +68,19 @@ interface BreathingApiService {
 
     @GET("api/v1/respira/ejercicios")
     suspend fun getEjercicios(): Response<List<EjercicioDto>>
+
+    @GET("api/v1/respira/ejercicios/{id}")
+    suspend fun getEjercicio(
+        @Header("Authorization") authorization: String,
+        @Path("id") id: String
+    ): Response<EjercicioDto>
+
+    @PUT("api/v1/respira/ejercicios/{id}")
+    suspend fun updateEjercicio(
+        @Header("Authorization") authorization: String,
+        @Path("id") id: String,
+        @Body request: UpdateExerciseRequest
+    ): Response<EjercicioDto>
 }
 
 
@@ -124,7 +143,7 @@ class BreathingRepository(
 
         WorkManager.getInstance(context).enqueueUniqueWork(
             "breathing_sync",
-            ExistingWorkPolicy.KEEP,
+            ExistingWorkPolicy.REPLACE,
             request
         )
     }

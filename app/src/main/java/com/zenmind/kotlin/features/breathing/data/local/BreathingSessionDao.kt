@@ -15,6 +15,9 @@ interface BreathingSessionDao {
     @Query( "SELECT * FROM breathing_sessions WHERE synced = 0" )
     suspend fun getPending (): List<BreathingSessionEntity>
 
+    @Query( "DELETE FROM breathing_sessions WHERE ejercicioId <= 0" )
+    suspend fun deleteInvalidSessions()
+
     @Query ( "UPDATE breathing_sessions SET synced = 1 WHERE id = :id" )
     suspend fun markSynced ( id: Long )
 

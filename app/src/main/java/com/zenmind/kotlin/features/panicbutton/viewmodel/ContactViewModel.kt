@@ -35,14 +35,6 @@ class ContactViewModel (
     private val _call = MutableSharedFlow<String>()
     val call = _call.asSharedFlow()
 
-    fun onNameChange(text: String) {
-        _name.value = text.take(MAX_NAME)
-    }
-
-    fun onTelChange(text: String) {
-        _phone.value = text.filter { it.isDigit() }.take(MAX_NUMBER)
-    }
-
     fun save(contact: SupportContact) {
         if (contact.name.isBlank() || contact.phone.length < MIN_NUMBER) return
 

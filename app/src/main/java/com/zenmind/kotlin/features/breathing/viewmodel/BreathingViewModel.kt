@@ -44,40 +44,19 @@ class BreathingViewModel(
         val source = motionSource ?: return
         viewModelScope.launch {
             source.motion().collect { motion ->
-                when (_uiState.value.status) {
-                    SessionStatus.Idle -> {
-                        _uiState.update {
-                            it.copy(
-                                message = if (motion == MotionState.Moving)
-                                    "Apoya el telefono o sientate" else null
-                            )
-                        }
-                    }
-                    SessionStatus.Running -> {
-                        if (motion == MotionState.Moving) {
-                            scheduleMovementPause()
-                        } else {
-                            movementPauseJob?.cancel()
-                        }
-                    }
-                    else -> { }
+                _uiState.update {
+                    it.copy(
+                        message = if (motion == MotionState.Moving)
+                            "Apoya el teléfono o siéntate" else null
+                    )
                 }
             }
         }
     }
 
-    /** Si el movimiento dura 3 segundos seguidos, pausa la sesion. */
-    private fun scheduleMovementPause() {
-        if (movementPauseJob?.isActive == true) return
-        movementPauseJob = viewModelScope.launch {
-            delay(5000)
-            exercise?.let { start(it) }
-            _uiState.update { it.copy(message = "Movimiento detectado, sesion reiniciada") }
-        }
-    }
-
     fun start(exercise: BreathingExercise) {
         this.exercise = exercise
+        this.currentEjercicioId = exercise.id
         timerJob?.cancel()
         _uiState.value = BreathingUiState(
             status = SessionStatus.Running,
@@ -101,9 +80,9 @@ class BreathingViewModel(
                 }
             }
             _uiState.update {
-                it.copy(status = SessionStatus.Finished, phase = null, secondsLeft = 0)
+                it.copy(status = SessionStatus.Finished, phase = null, secondsLeft = 0, message = "¡Sesión completada!.")
             }
-            // La sesion termino: registra el uso (local + encola sync).
+            // La sesion termino, registra el uso (local + encola sync).
             android.util.Log.d("BreathingSync", "Sesion terminada, guardando (repo=${repository != null})")
             repository?.guardarSesion(ejercicioId = currentEjercicioId)
             android.util.Log.d("BreathingSync", "guardarSesion llamado")
