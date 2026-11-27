@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.zenmind.kotlin.features.dailycheckin.data.db.CheckinDao
@@ -18,6 +19,9 @@ import com.zenmind.kotlin.features.breathing.data.local.BreathingExerciseEntity
 import com.zenmind.kotlin.features.breathing.data.local.BreathingExerciseDao
 import com.zenmind.kotlin.features.panicbutton.data.ContactDao
 import com.zenmind.kotlin.features.panicbutton.data.ContactEntity
+import com.zenmind.kotlin.features.protocols.data.db.ProtocolDao
+import com.zenmind.kotlin.features.protocols.data.db.ProtocolEntity
+import com.zenmind.kotlin.features.protocols.data.db.StepsConverter
 
 val MIGRATION_4_5 = object : Migration(4, 5) {
     override fun migrate(db: SupportSQLiteDatabase) {
@@ -52,6 +56,15 @@ val MIGRATION_6_7 = object : Migration(6, 7) {
     }
 }
 
+val MIGRATION_7_8 = object : Migration(7, 8) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("""CREATE TABLE IF NOT EXISTS `protocol_table` (
+            `id` INTEGER NOT NULL, `userId` TEXT NOT NULL, `titulo` TEXT NOT NULL,
+            `esPredefinido` INTEGER NOT NULL, `pasos` TEXT NOT NULL, `synced` INTEGER NOT NULL,
+            PRIMARY KEY(`id`, `userId`))""")
+    }
+}
+
 @Database(
     entities = [
         CheckinEntity::class, 
@@ -59,10 +72,12 @@ val MIGRATION_6_7 = object : Migration(6, 7) {
         BreathingSessionEntity::class,
         BreathingExerciseEntity::class,
         GameSessionEntity::class,
-        ContactEntity::class],
-    version = 7,
+        ContactEntity::class,
+        ProtocolEntity::class],
+    version = 8,
     exportSchema = false
     )
+@TypeConverters(StepsConverter::class)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun getCheckinDao(): CheckinDao
@@ -73,6 +88,8 @@ abstract class AppDatabase : RoomDatabase() {
 
     abstract fun panicButtonDao(): ContactDao
 
+    abstract fun protocolDao(): ProtocolDao
+
     companion object {
         @Volatile
         private var instance: AppDatabase? = null
@@ -82,7 +99,7 @@ abstract class AppDatabase : RoomDatabase() {
                 synchronized(this) {
                     if (instance == null) {
                         instance = Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "zenmind_db")
-                            .addMigrations(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+                            .addMigrations(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
                             .build()
                     }
                 }
