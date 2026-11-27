@@ -42,7 +42,16 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Air
 import androidx.compose.material3.Icon
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.draw.clip
+import com.zenmind.kotlin.core.network.ConnectivityObserver
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.outlined.CloudOff
 
 private val Cream = Color(0xFFFFF9E2)
 private val TextBrown = Color(0xFF8A6F5B)
@@ -61,6 +70,24 @@ fun BreathingSessionScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val isOnline by remember(context) {
+        ConnectivityObserver(context).onlineFlow
+    }.collectAsState(initial = true)
+
+    var wasOffline by remember { mutableStateOf(false) }
+    LaunchedEffect(isOnline) {
+        if (!isOnline) {
+            wasOffline = true
+        } else if (wasOffline) {
+            android.widget.Toast.makeText(
+                context,
+                "¡Conexión recuperada! Sincronizando sesiones pendientes con el servidor...",
+                android.widget.Toast.LENGTH_SHORT
+            ).show()
+            wasOffline = false
+        }
+    }
+
     val exercise by androidx.compose.runtime.produceState(
         initialValue = BreathingCatalog.default(),
         key1 = exerciseId
@@ -110,6 +137,11 @@ fun BreathingSessionScreen(
                         modifier = Modifier.size(20.dp)
                     )
                 }
+            }
+
+            if (!isOnline) {
+                Spacer(Modifier.height(8.dp))
+                OfflineNoticeBanner("Modo Offline: Al finalizar, tu sesión se guardará localmente en Room y se sincronizará cuando vuelva la red.")
             }
 
             Spacer(Modifier.height(20.dp))
@@ -267,5 +299,32 @@ fun BreathingSessionScreen(
             Spacer(Modifier.weight(1f))
             Spacer(Modifier.height(64.dp))
         }
+    }
+}
+
+@Composable
+private fun OfflineNoticeBanner(text: String) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(Peach.copy(alpha = 0.2f))
+            .border(1.dp, Peach, RoundedCornerShape(12.dp))
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.CloudOff,
+            contentDescription = null,
+            tint = TextBrown,
+            modifier = Modifier.size(16.dp)
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = text,
+            fontSize = 12.sp,
+            color = TextBrown,
+            fontWeight = FontWeight.Medium
+        )
     }
 }

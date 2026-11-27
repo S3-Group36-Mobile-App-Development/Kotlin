@@ -30,6 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -55,6 +56,7 @@ fun AddContactScreen(
     var phone by remember { mutableStateOf("") }
 
     val canSave = name.isNotBlank() && phone.isNotBlank()
+    val context = LocalContext.current
 
     Box(
         modifier = Modifier
@@ -135,6 +137,11 @@ fun AddContactScreen(
             Button(
                 onClick = {
                     onSave(SupportContact(name = name.trim(), phone = phone.trim()))
+                    android.widget.Toast.makeText(
+                        context,
+                        "Contacto guardado localmente en Room",
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
                 },
                 enabled = canSave,
                 shape = RoundedCornerShape(16.dp),

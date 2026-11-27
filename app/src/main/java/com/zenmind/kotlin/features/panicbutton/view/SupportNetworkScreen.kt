@@ -45,7 +45,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.outlined.CloudOff
+import androidx.compose.runtime.remember
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.zenmind.kotlin.core.network.ConnectivityObserver
 import com.zenmind.kotlin.features.panicbutton.model.Helpline
 import com.zenmind.kotlin.features.panicbutton.model.SupportContact
 import com.zenmind.kotlin.features.panicbutton.viewmodel.ContactViewModel
@@ -68,22 +72,19 @@ private val Background = Color(0xFFFFF9E2)
 
 @Composable
 fun SupportNetworkScreen(
-    contacts: List<SupportContact> = emptyList(),
     helplines: List<Helpline> = defaultHelplines(),
     onBack: () -> Unit = {},
-    onAddContact: () -> Unit = {},
-    onCall: (String) -> Unit = {},
-    onMessage: (String) -> Unit = {}
+    onAddContact: () -> Unit = {}
 ) {
     val viewModel: ContactViewModel = viewModel(
         factory = ContactViewModelFactory(LocalContext.current)
     )
     val context = LocalContext.current
-
-    val name by viewModel.name.collectAsState()
-    val phone by viewModel.phone.collectAsState()
     val contacts by viewModel.contacts.collectAsState()
 
+    val isOnline by remember(context) {
+        ConnectivityObserver(context).onlineFlow
+    }.collectAsState(initial = true)
 
     LaunchedEffect(Unit) {
         viewModel.call.collect { number ->
@@ -101,7 +102,13 @@ fun SupportNetworkScreen(
                 .statusBarsPadding()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp, vertical = 12.dp)
+
         ) {
+            if (!isOnline) {
+                OfflineNoticeBanner("Almacenamiento Local: Tus contactos se gestionan de forma local en la base de datos de Room.")
+                Spacer(Modifier.height(12.dp))
+            }
+
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
@@ -183,6 +190,7 @@ fun SupportNetworkScreen(
                 HelplineCard(
                     helpline = helpline,
                     onCall = {
+                        android.widget.Toast.makeText(context, "Abriendo marcador de llamadas local...", android.widget.Toast.LENGTH_SHORT).show()
                         val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${helpline.phone}"))
                         context.startActivity(intent)
                     }
@@ -379,9 +387,37 @@ private fun Divider() {
     )
 }
 
+@Composable
+private fun OfflineNoticeBanner(text: String) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(ZenPeach)
+            .border(1.dp, ZenOrange, RoundedCornerShape(12.dp))
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.CloudOff,
+            contentDescription = null,
+            tint = ZenLabel,
+            modifier = Modifier.size(16.dp)
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = text,
+            fontSize = 12.sp,
+            color = ZenLabel,
+            fontWeight = FontWeight.Medium
+        )
+    }
+}
+
 /** Líneas de ayuda por defecto mostradas en el diseño. */
 fun defaultHelplines(): List<Helpline> = listOf(
     Helpline("Emergencias Nacional Médicas y Psicológicas", "123"),
     Helpline("Línea Apoyo Emocional", "106"),
     Helpline("Prevención Suicidio", "018000912342")
 )
+

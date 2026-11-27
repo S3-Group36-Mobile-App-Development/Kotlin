@@ -11,7 +11,7 @@ object BreathingCatalog {
 
     /** El ejercicio de respiracion guiada por defecto. */
     fun default(): BreathingExercise = BreathingExercise(
-        id = 0,
+        id = 1,
         name = "Respiracion guiada",
         description = "Encuentra tu ritmo y equilibra tu sistema.",
         steps = listOf(

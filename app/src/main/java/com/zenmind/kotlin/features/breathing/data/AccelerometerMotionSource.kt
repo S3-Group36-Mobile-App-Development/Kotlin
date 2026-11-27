@@ -19,8 +19,7 @@ import kotlin.math.sqrt
  */
 class AccelerometerMotionSource(context: Context) {
 
-    private val sensorManager =
-        context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+    private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
 
     fun motion(): Flow<MotionState> = callbackFlow {
         val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)

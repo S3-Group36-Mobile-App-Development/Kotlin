@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "182624240517",
-    "project_id": "zenmind-9029a",
-    "storage_bucket": "zenmind-9029a.firebasestorage.app"
+    "project_number": "426506323964",
+    "project_id": "zendmind-kotlin",
+    "storage_bucket": "zendmind-kotlin.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:182624240517:android:cd4569c46fcd1dc7cfbaec",
+        "mobilesdk_app_id": "1:426506323964:android:88bb1950b10deacb5f9479",
         "android_client_info": {
           "package_name": "com.zenmind.kotlin"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyDUOnhZLEt8J9jgUzv-19sZbkTE-JxCORg"
+          "current_key": "AIzaSyACRkn1jOuWyJAT4qhRBq3s6X0u61CUDOU"
         }
       ],
       "services": {
