@@ -68,7 +68,7 @@ class PanicViewModel(
         val cleanPhone = telefono.filter { it.isDigit() || it == '+' }
         val error = when {
             cleanName.isEmpty() -> "Escribe el nombre de tu contacto."
-            cleanPhone.count { it.isDigit() } !in 7..15 -> "Escribe un teléfono válido, de 7 a 15 dígitos."
+            cleanPhone.count { it.isDigit() } !in MIN_DIGITS..MAX_DIGITS -> "Escribe un teléfono de 10 a 15 dígitos."
             else -> null
         }
         if (error != null) {
@@ -128,6 +128,8 @@ class PanicViewModel(
 
     companion object {
         private const val SCREEN = "panico"
+        private const val MIN_DIGITS = 10
+        private const val MAX_DIGITS = 15
 
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {

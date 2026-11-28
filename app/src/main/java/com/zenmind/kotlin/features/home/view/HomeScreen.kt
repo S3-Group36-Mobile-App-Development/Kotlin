@@ -23,16 +23,12 @@ import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.outlined.Phone
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.graphics.shadow.Shadow
@@ -63,24 +59,10 @@ import com.zenmind.kotlin.ui.theme.ZenText
 fun HomeScreen(
     onFeatureClick: (HomeFeature) -> Unit,
     onContinueClick: () -> Unit = {},
-    onPanicClick: () -> Unit = {},
     onLogoutClick: () -> Unit = {}
 ) {
     Scaffold(
-        containerColor = ZenCream,
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = onPanicClick,
-                shape = CircleShape,
-                containerColor = ZenOrange,
-                contentColor = Color.White
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Phone,
-                    contentDescription = "Botón de pánico"
-                )
-            }
-        }
+        containerColor = ZenCream
     ) { innerPadding ->
 
         Column(
