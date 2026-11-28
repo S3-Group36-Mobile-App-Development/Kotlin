@@ -131,6 +131,10 @@ class OfflineFirstDailyCheckInRepository(
                     keepServerCheckIn(checkin.id)
                     true
                 }
+                isDefinitiveRejection(response.code()) -> {
+                    checkinDao.markSynced(checkin.id)
+                    false
+                }
                 else -> false
             }
         } catch (e: IOException) {
@@ -216,6 +220,10 @@ class OfflineFirstDailyCheckInRepository(
                     keepServerCheckIn(id)
                     SaveResult.ALREADY_REGISTERED
                 }
+                isDefinitiveRejection(response.code()) -> {
+                    checkinDao.markSynced(id)
+                    SaveResult.LOCAL_ONLY
+                }
                 else -> SaveResult.PENDING
             }
         } catch (e: IOException) {
@@ -223,33 +231,57 @@ class OfflineFirstDailyCheckInRepository(
         }
     }
 
-    private fun categoryFor(mood: Mood): String? = when (mood.name) {
-        "Ansioso" -> "Ansiedad"
-        "Estresado" -> "Estrés"
+    private fun topicFor(mood: Mood): String? = when (mood.name) {
+        "Feliz" -> "Self-community (apoyo mutuo)"
+        "Tranquilo" -> "Self-care (autocuidado)"
+        "Ansioso" -> "Entender la ansiedad"
+        "Triste" -> "Entender la depresión"
+        "Estresado" -> "Manejo del estrés"
         else -> null
     }
 
-    override fun hasRecommendation(mood: Mood): Boolean = categoryFor(mood) != null
+    override fun hasRecommendation(mood: Mood): Boolean = topicFor(mood) != null
 
     override suspend fun getRecommendedFlashcard(mood: Mood): Flashcard? {
-        val category = categoryFor(mood) ?: return null
+        val topic = topicFor(mood) ?: return null
+
+        flashcardsCache.getFlashcards(topic)?.firstOrNull()?.let {
+            Log.d("FlashcardsCache", "Fetching from the cache")
+            return it
+        }
+
+        val today = checkinDao.getByDate(localToday(), currentUserId())
+        val saved = today?.cardContent?.takeIf { today.moodName == mood.name }
+        if (saved != null) {
+            Log.d("FlashcardsCache", "Fetching from Room")
+            val flashcard = Flashcard(today.cardTitle ?: topic, saved, today.cardSource)
+            flashcardsCache.saveFlashcards(topic, listOf(flashcard))
+            return flashcard
+        }
+
         return try {
-            var flashcards = flashcardsCache.getFlashcards(category)
-            if (flashcards == null){
-                Log.d("FlashcardsCache", "Fetching from Network")
-                flashcards = api.getFlashcards(category).map { Flashcard(it.categoria, it.contenido)  }
-                if (flashcards.isNotEmpty()){
-                    flashcardsCache.saveFlashcards(category, flashcards)
-                }
-            } else {
-                Log.d("FlashcardsCache", "Fetching from the cache")
+            Log.d("FlashcardsCache", "Fetching from Network")
+            val flashcards = downloadFlashcards(topic)
+            if (flashcards.isNotEmpty()) {
+                flashcardsCache.saveFlashcards(topic, flashcards)
+                val first = flashcards.first()
+                checkinDao.saveCard(localToday(), currentUserId(), first.category, first.content, first.source)
             }
             flashcards.firstOrNull()
-        } catch (e: Exception){
-            Log.e("FlashcardsCache", "No se pudo obtener la flashcard de $category", e)
+        } catch (e: Exception) {
+            Log.e("FlashcardsCache", "No se pudo obtener la flashcard de $topic", e)
             null
         }
     }
+
+    private suspend fun downloadFlashcards(topic: String): List<Flashcard> {
+        val match = api.getFlashcardTopics().find { it.titulo == topic } ?: return emptyList()
+        val detail = api.getFlashcardTopic(match.id.toLong())
+        return detail.cards.map { Flashcard(detail.titulo, it.contenido, it.fuente) }
+    }
+
+    private fun isDefinitiveRejection(code: Int): Boolean =
+        code in 400..499 && code != 401 && code != 408 && code != 429
 
     private companion object {
         const val GUEST_ID = "guest"

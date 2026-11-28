@@ -36,14 +36,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -144,9 +140,8 @@ fun DailyCheckInContent(
     ) {
         ZenTopBar(title = "Check-in", onBack = onBack)
 
-        var offlineDismissed by remember(state.isOffline) { mutableStateOf(false) }
-        if (state.isOffline && !offlineDismissed) {
-            OfflineBanner(onClose = { offlineDismissed = true })
+        if (state.isOffline) {
+            OfflineBanner()
         }
 
         if (state.isLoading) {
@@ -454,7 +449,7 @@ private fun MoodBadge(mood: Mood) {
 }
 
 @Composable
-private fun OfflineBanner(onClose: () -> Unit) {
+private fun OfflineBanner() {
     val shape = RoundedCornerShape(12.dp)
     Box(
         modifier = Modifier
@@ -464,7 +459,7 @@ private fun OfflineBanner(onClose: () -> Unit) {
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(start = 14.dp, top = 12.dp, bottom = 12.dp, end = 32.dp)
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)
         ) {
             Icon(Icons.Outlined.CloudOff, contentDescription = null, tint = ZenCream, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(10.dp))
@@ -474,14 +469,6 @@ private fun OfflineBanner(onClose: () -> Unit) {
                 fontSize = 13.sp,
                 color = ZenCream
             )
-        }
-        IconButton(
-            onClick = onClose,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .size(28.dp)
-        ) {
-            Icon(Icons.Outlined.Close, contentDescription = "Cerrar aviso", tint = ZenCream, modifier = Modifier.size(14.dp))
         }
     }
 }
