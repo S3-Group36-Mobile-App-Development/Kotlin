@@ -6,6 +6,7 @@ data class ProtocolsUiState(
     val isOffline: Boolean = false,
     val protocols: List<Protocol> = emptyList(),
     val selected: Protocol? = null,
+    val isLoadingDetail: Boolean = false,
     val isSaving: Boolean = false,
     val message: String? = null
 )

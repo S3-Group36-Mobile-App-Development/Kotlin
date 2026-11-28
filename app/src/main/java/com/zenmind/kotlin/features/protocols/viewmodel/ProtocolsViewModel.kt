@@ -83,10 +83,10 @@ class ProtocolsViewModel(
     }
 
     fun openProtocol(id: Long) {
-        _uiState.update { it.copy(selected = null) }
+        _uiState.update { it.copy(selected = null, isLoadingDetail = true) }
         viewModelScope.launch(Dispatchers.Main) {
             val protocol = withContext(Dispatchers.IO) { repository.getProtocol(id) }
-            _uiState.update { it.copy(selected = protocol) }
+            _uiState.update { it.copy(selected = protocol, isLoadingDetail = false) }
         }
     }
 
