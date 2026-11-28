@@ -19,6 +19,8 @@ import com.zenmind.kotlin.features.breathing.data.local.BreathingExerciseEntity
 import com.zenmind.kotlin.features.breathing.data.local.BreathingExerciseDao
 import com.zenmind.kotlin.features.panicbutton.data.ContactDao
 import com.zenmind.kotlin.features.panicbutton.data.ContactEntity
+import com.zenmind.kotlin.features.panic.data.db.EmergencyContactDao
+import com.zenmind.kotlin.features.panic.data.db.EmergencyContactEntity
 import com.zenmind.kotlin.features.protocols.data.db.ProtocolDao
 import com.zenmind.kotlin.features.protocols.data.db.ProtocolEntity
 import com.zenmind.kotlin.features.protocols.data.db.StepsConverter
@@ -94,6 +96,14 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
     }
 }
 
+val MIGRATION_8_9 = object : Migration(8, 9) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("""CREATE TABLE IF NOT EXISTS `emergency_contact_table` (
+            `id` INTEGER NOT NULL, `nombre` TEXT NOT NULL, `telefono` TEXT NOT NULL,
+            `relacion` TEXT, PRIMARY KEY(`id`))""")
+    }
+}
+
 @Database(
     entities = [
         CheckinEntity::class, 
@@ -105,9 +115,10 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
         FlashcardReactionEntity::class,
         FlashcardTemaEntity::class,
         FlashcardCardEntity::class,
-        ProtocolEntity::class
+        ProtocolEntity::class,
+        EmergencyContactEntity::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = false
 )
 @TypeConverters(StepsConverter::class)
@@ -121,6 +132,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun panicButtonDao(): ContactDao
     abstract fun flashcardDao(): FlashcardDao
     abstract fun protocolDao(): ProtocolDao
+    abstract fun emergencyContactDao(): EmergencyContactDao
 
     companion object {
         @Volatile
@@ -131,7 +143,7 @@ abstract class AppDatabase : RoomDatabase() {
                 synchronized(this) {
                     if (instance == null) {
                         instance = Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "zenmind_db")
-                            .addMigrations(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
+                            .addMigrations(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
                             .build()
                     }
                 }
