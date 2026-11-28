@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -18,11 +19,16 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zenmind.kotlin.ui.theme.Nunito
 import com.zenmind.kotlin.ui.theme.ZenBrown
 import com.zenmind.kotlin.ui.theme.ZenCream
+import com.zenmind.kotlin.ui.theme.ZenOrange
+import com.zenmind.kotlin.ui.theme.ZenPeach
+import com.zenmind.kotlin.ui.theme.ZenSubtle
+import com.zenmind.kotlin.ui.theme.ZenText
 
 @Composable
 fun ProtocolOfflineBanner(text: String) {
@@ -37,6 +43,31 @@ fun ProtocolOfflineBanner(text: String) {
         Spacer(Modifier.width(10.dp))
         Text(text, fontFamily = Nunito, fontSize = 13.sp, color = ZenCream)
     }
+}
+
+@Composable
+fun protocolFieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedTextColor = ZenText,
+    unfocusedTextColor = ZenText,
+    focusedPlaceholderColor = ZenSubtle,
+    unfocusedPlaceholderColor = ZenSubtle,
+    cursorColor = ZenOrange,
+    focusedContainerColor = ZenPeach,
+    unfocusedContainerColor = ZenPeach,
+    focusedBorderColor = ZenOrange,
+    unfocusedBorderColor = ZenOrange
+)
+
+@Composable
+fun ProtocolHint(text: String, modifier: Modifier = Modifier) {
+    Text(
+        text,
+        fontFamily = Nunito,
+        fontSize = 12.sp,
+        color = ZenSubtle,
+        textAlign = TextAlign.Center,
+        modifier = modifier.fillMaxWidth()
+    )
 }
 
 @Composable

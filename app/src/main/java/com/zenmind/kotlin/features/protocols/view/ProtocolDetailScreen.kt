@@ -26,7 +26,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -62,7 +61,7 @@ fun ProtocolDetailScreen(
             .padding(horizontal = 24.dp)
     ) {
         Spacer(Modifier.height(8.dp))
-        ZenTopBar(title = "Protocolo", onBack = onBack)
+        ZenTopBar(title = "Protocolos", onBack = onBack)
         Spacer(Modifier.height(16.dp))
 
         val protocol = state.selected
@@ -74,21 +73,12 @@ fun ProtocolDetailScreen(
                 Text("No se encontró este protocolo en el teléfono.", fontFamily = Nunito, color = ZenLabel)
             }
             else -> {
-                Text(
-                    protocol.titulo,
-                    fontFamily = NunitoBold,
-                    fontSize = 22.sp,
-                    color = ZenText,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Text(protocol.titulo, fontFamily = NunitoBold, fontSize = 22.sp, color = ZenLabel)
                 Text(
                     if (protocol.synced) "${protocol.pasos.size} pasos" else "${protocol.pasos.size} pasos · Pendiente de enviar",
                     fontFamily = Nunito,
-                    fontSize = 14.sp,
-                    color = ZenSubtle,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
+                    fontSize = 13.sp,
+                    color = ZenSubtle
                 )
                 Spacer(Modifier.height(20.dp))
                 LazyColumn(

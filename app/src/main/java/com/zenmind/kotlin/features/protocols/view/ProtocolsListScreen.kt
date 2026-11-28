@@ -20,7 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -40,6 +40,7 @@ import com.zenmind.kotlin.ui.components.ZenTopBar
 import com.zenmind.kotlin.ui.theme.Nunito
 import com.zenmind.kotlin.ui.theme.NunitoBold
 import com.zenmind.kotlin.ui.theme.ZenCream
+import com.zenmind.kotlin.ui.theme.ZenIcon
 import com.zenmind.kotlin.ui.theme.ZenLabel
 import com.zenmind.kotlin.ui.theme.ZenOrange
 import com.zenmind.kotlin.ui.theme.ZenPeach
@@ -73,19 +74,19 @@ fun ProtocolsListScreen(
         Column(Modifier.fillMaxSize().padding(horizontal = 24.dp)) {
             Spacer(Modifier.height(8.dp))
             ZenTopBar(title = "Protocolos", onBack = onBack)
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(12.dp))
             Text(
-                "Tus rutinas para momentos difíciles",
+                "Rutinas para momentos difíciles.",
                 fontFamily = Nunito,
-                fontSize = 14.sp,
-                color = ZenLabel,
+                fontSize = 13.sp,
+                color = ZenSubtle,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(16.dp))
 
             if (state.isOffline) {
-                ProtocolOfflineBanner("No se pudo conectar. Estás viendo los protocolos guardados en el teléfono; los que crees se enviarán al reconectar.")
+                ProtocolOfflineBanner("Sin conexión. Estás viendo los protocolos guardados en el teléfono.")
                 Spacer(Modifier.height(12.dp))
             }
 
@@ -95,7 +96,7 @@ fun ProtocolsListScreen(
                     CircularProgressIndicator(color = ZenOrange)
                 }
                 state.protocols.isEmpty() && state.isOffline -> CenteredText("Sin conexión y sin protocolos guardados. Conéctate una vez para descargarlos.")
-                state.protocols.isEmpty() -> CenteredText("Aún no tienes protocolos. Crea el primero con el botón de abajo.")
+                state.protocols.isEmpty() -> CenteredText("Aún no tienes protocolos. Crea el primero con el botón +.")
                 else -> LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = PaddingValues(bottom = 96.dp)
@@ -108,16 +109,17 @@ fun ProtocolsListScreen(
         }
 
         if (!state.isGuest) {
-            ExtendedFloatingActionButton(
+            FloatingActionButton(
                 onClick = onCreate,
+                shape = RoundedCornerShape(16.dp),
                 containerColor = ZenOrange,
-                contentColor = ZenText,
-                icon = { Icon(Icons.Outlined.Add, contentDescription = null) },
-                text = { Text("Crear", fontFamily = NunitoBold) },
+                contentColor = ZenIcon,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(24.dp)
-            )
+            ) {
+                Icon(Icons.Outlined.Add, contentDescription = "Crear protocolo")
+            }
         }
 
         ProtocolSnackbarHost(
