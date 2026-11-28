@@ -62,9 +62,10 @@ import com.zenmind.kotlin.ui.theme.ZenText
 @Composable
 fun HomeScreen(
     onFeatureClick: (HomeFeature) -> Unit,
+    onProfileClick: () -> Unit,
+    offlineSession: Boolean = false,
     onContinueClick: () -> Unit = {},
-    onPanicClick: () -> Unit = {},
-    onLogoutClick: () -> Unit = {}
+    onPanicClick: () -> Unit = {}
 ) {
     Scaffold(
         containerColor = ZenCream,
@@ -95,25 +96,21 @@ fun HomeScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            HomeHeader(
-                onLogoutClick = onLogoutClick
-            )
+            HomeHeader(onProfileClick = onProfileClick)
 
-            Spacer(
-                modifier = Modifier.height(12.dp)
-            )
-
-            CheckInCard(
-                onClick = onContinueClick
-            )
-
-            Spacer(
-                modifier = Modifier.height(16.dp)
-            )
-
-            FeatureGrid(
-                onFeatureClick = onFeatureClick
-            )
+            if (offlineSession) {
+                Text(
+                    "Modo offline. Los datos guardados están disponibles; la sincronización requiere verificar tu sesión.",
+                    modifier = Modifier.padding(vertical = 16.dp),
+                    color = ZenText,
+                    fontFamily = Nunito,
+                    textAlign = TextAlign.Center
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            CheckInCard(onClick = onContinueClick)
+            Spacer(modifier = Modifier.height(16.dp))
+            FeatureGrid(onFeatureClick = onFeatureClick)
 
             Spacer(
                 modifier = Modifier.height(80.dp)
@@ -124,28 +121,16 @@ fun HomeScreen(
 
 @Composable
 private fun HomeHeader(
-    onLogoutClick: () -> Unit
+    onProfileClick: () -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
-        Text(
-            text = "Cerrar sesión",
-            fontFamily = NunitoBold,
-            fontSize = 12.sp,
-            color = ZenOrange,
-            modifier = Modifier
-                .align(Alignment.End)
-                .clickable {
-                    onLogoutClick()
-                }
-                .padding(
-                    horizontal = 8.dp,
-                    vertical = 6.dp
-                )
-        )
+        Text("Mi perfil", fontFamily = NunitoBold, fontSize = 12.sp, color = ZenOrange,
+            modifier = Modifier.align(Alignment.End).clickable(onClick = onProfileClick)
+                .padding(horizontal = 8.dp, vertical = 6.dp))
 
         Image(
             painter = painterResource(

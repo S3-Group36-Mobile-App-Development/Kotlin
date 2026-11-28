@@ -17,6 +17,8 @@ import com.zenmind.kotlin.features.games.data.GameSyncScheduler
 import com.zenmind.kotlin.features.protocols.data.ProtocolApiService
 import com.zenmind.kotlin.features.protocols.data.ProtocolCache
 import com.zenmind.kotlin.features.protocols.data.ProtocolRepository
+import com.zenmind.kotlin.features.profile.data.ProfileApiService
+import com.zenmind.kotlin.features.profile.data.ProfileRepository
 import kotlinx.coroutines.CancellationException
 
 interface AppContainer {
@@ -24,6 +26,8 @@ interface AppContainer {
     val telemetryRepository: TelemetryRepository
     val connectivityObserver: ConnectivityObserver
     val protocolRepository: ProtocolRepository
+    val profileRepository: ProfileRepository
+    fun onVerifiedSession(userId: String)
 }
 
 class DefaultAppContainer(
@@ -68,14 +72,36 @@ class DefaultAppContainer(
         )
     }
 
+    override val profileRepository: ProfileRepository by lazy {
+        ProfileRepository(
+            ApiClient.retrofit.create(ProfileApiService::class.java),
+            database.profileDao(),
+            tokenStorage
+        )
+    }
+
     override val telemetryRepository: TelemetryRepository by lazy {
         TelemetryRepository(ApiClient.retrofit.create(TelemetryApiService::class.java), applicationScope)
+    }
+
+    override fun onVerifiedSession(userId: String) {
+        profileRepository.markVerified(userId)
+        if (!profileRepository.isVerified(userId)) return
+        applicationScope.launch {
+            profileRepository.syncPending(userId)
+            if (!profileRepository.isVerified(userId)) return@launch
+            runCatching { dailyCheckInRepository.syncPending() }
+            runCatching { protocolRepository.syncPending() }
+        }
     }
 
     init {
         applicationScope.launch {
             connectivityObserver.onlineFlow.collect { online ->
-                if (online) {
+                val userId = tokenStorage.getSessionUserId()
+                val maySync = !tokenStorage.hasSession() ||
+                    (userId != null && profileRepository.isVerified(userId))
+                if (online && maySync) {
                     applicationScope.launch {
                         try { GameSyncScheduler.enqueuePending(context) }
                         catch (e: CancellationException) { throw e }

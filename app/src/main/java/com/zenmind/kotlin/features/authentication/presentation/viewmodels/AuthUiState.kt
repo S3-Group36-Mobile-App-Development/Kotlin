@@ -8,6 +8,10 @@ sealed interface AuthUiState {
 
     data class SessionUnavailable(val message: String) : AuthUiState
 
+    data class OfflineSession(val userId: String) : AuthUiState
+
+    data object SessionInvalidated : AuthUiState
+
     data object Idle : AuthUiState
 
     data object Loading : AuthUiState

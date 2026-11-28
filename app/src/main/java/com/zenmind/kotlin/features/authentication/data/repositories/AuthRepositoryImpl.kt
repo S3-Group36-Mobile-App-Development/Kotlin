@@ -30,7 +30,8 @@ class AuthRepositoryImpl(
             ?: throw Exception("La respuesta del servidor está vacía.")
         tokenStorage.saveTokens(
             accessToken = authResponse.accessToken,
-            refreshToken = authResponse.refreshToken
+            refreshToken = authResponse.refreshToken,
+            userId = authResponse.usuario.id
         )
         return authResponse
     }
@@ -56,7 +57,8 @@ class AuthRepositoryImpl(
 
             tokenStorage.saveTokens(
                 accessToken = authResponse.accessToken,
-                refreshToken = authResponse.refreshToken
+                refreshToken = authResponse.refreshToken,
+                userId = authResponse.usuario.id
             )
 
             return authResponse
@@ -94,7 +96,8 @@ class AuthRepositoryImpl(
 
             tokenStorage.saveTokens(
                 accessToken = authResponse.accessToken,
-                refreshToken = authResponse.refreshToken
+                refreshToken = authResponse.refreshToken,
+                userId = authResponse.usuario.id
             )
 
             return authResponse
@@ -146,8 +149,10 @@ class AuthRepositoryImpl(
             throw IOException("No se pudo verificar la sesión. Comprueba tu conexión e inténtalo de nuevo.")
         }
 
-        return userResponse.body()
+        val user = userResponse.body()
             ?: throw IOException("El servidor no pudo verificar la sesión. Inténtalo de nuevo.")
+        tokenStorage.saveSessionUserId(user.id)
+        return user
     }
 
     override fun logout() {

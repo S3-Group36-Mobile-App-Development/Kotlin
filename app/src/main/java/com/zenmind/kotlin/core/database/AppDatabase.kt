@@ -26,6 +26,11 @@ import com.zenmind.kotlin.features.flashcards.data.local.FlashcardDao
 import com.zenmind.kotlin.features.flashcards.data.local.FlashcardReactionEntity
 import com.zenmind.kotlin.features.flashcards.data.local.FlashcardTemaEntity
 import com.zenmind.kotlin.features.flashcards.data.local.FlashcardCardEntity
+import com.zenmind.kotlin.features.profile.data.local.ProfileDao
+import com.zenmind.kotlin.features.profile.data.local.ProfileEntity
+import com.zenmind.kotlin.features.profile.data.local.InstitutionEntity
+import com.zenmind.kotlin.features.profile.data.local.DepartmentEntity
+import com.zenmind.kotlin.features.profile.data.local.PendingProfileEntity
 
 val MIGRATION_4_5 = object : Migration(4, 5) {
     override fun migrate(db: SupportSQLiteDatabase) {
@@ -94,6 +99,27 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
     }
 }
 
+val MIGRATION_8_9 = object : Migration(8, 9) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("""CREATE TABLE IF NOT EXISTS `profiles` (
+            `userId` TEXT NOT NULL, `email` TEXT NOT NULL, `name` TEXT NOT NULL,
+            `createdAt` TEXT NOT NULL, `institutionId` TEXT, `departmentId` TEXT,
+            `currentStreak` INTEGER, `bestStreak` INTEGER, PRIMARY KEY(`userId`))""")
+        db.execSQL("""CREATE TABLE IF NOT EXISTS `institutions` (
+            `id` TEXT NOT NULL, `name` TEXT NOT NULL, `type` TEXT NOT NULL, PRIMARY KEY(`id`))""")
+        db.execSQL("""CREATE TABLE IF NOT EXISTS `departments` (
+            `id` TEXT NOT NULL, `institutionId` TEXT NOT NULL, `name` TEXT NOT NULL, PRIMARY KEY(`id`))""")
+    }
+}
+
+val MIGRATION_9_10 = object : Migration(9, 10) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("""CREATE TABLE IF NOT EXISTS `pending_profile_changes` (
+            `userId` TEXT NOT NULL, `pendingName` TEXT, `pendingInstitutionId` TEXT,
+            `pendingDepartmentId` TEXT, PRIMARY KEY(`userId`))""")
+    }
+}
+
 @Database(
     entities = [
         CheckinEntity::class, 
@@ -105,9 +131,13 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
         FlashcardReactionEntity::class,
         FlashcardTemaEntity::class,
         FlashcardCardEntity::class,
-        ProtocolEntity::class
+        ProtocolEntity::class,
+        ProfileEntity::class,
+        InstitutionEntity::class,
+        DepartmentEntity::class,
+        PendingProfileEntity::class
     ],
-    version = 8,
+    version = 10,
     exportSchema = false
 )
 @TypeConverters(StepsConverter::class)
@@ -121,6 +151,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun panicButtonDao(): ContactDao
     abstract fun flashcardDao(): FlashcardDao
     abstract fun protocolDao(): ProtocolDao
+    abstract fun profileDao(): ProfileDao
 
     companion object {
         @Volatile
@@ -131,7 +162,7 @@ abstract class AppDatabase : RoomDatabase() {
                 synchronized(this) {
                     if (instance == null) {
                         instance = Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "zenmind_db")
-                            .addMigrations(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
+                            .addMigrations(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
                             .build()
                     }
                 }
