@@ -5,7 +5,8 @@ import androidx.lifecycle.ViewModelProvider
 import com.zenmind.kotlin.features.authentication.data.repositories.AuthRepository
 
 class AuthViewModelFactory(
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val isOnline: () -> Boolean
 ) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")
@@ -15,7 +16,8 @@ class AuthViewModelFactory(
 
         if (modelClass.isAssignableFrom(AuthViewModel::class.java)) {
             return AuthViewModel(
-                authRepository = authRepository
+                authRepository = authRepository,
+                isOnline = isOnline
             ) as T
         }
 

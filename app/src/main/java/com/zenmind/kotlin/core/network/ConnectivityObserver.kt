@@ -30,7 +30,7 @@ class ConnectivityObserver(context: Context) {
         awaitClose { connectivityManager.unregisterNetworkCallback(callback) }
     }.distinctUntilChanged()
 
-    private fun isOnline(): Boolean {
+    fun isOnline(): Boolean {
         val capabilities = connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
             ?: return false
         return hasInternet(capabilities)

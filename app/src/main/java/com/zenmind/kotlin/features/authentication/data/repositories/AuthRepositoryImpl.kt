@@ -62,10 +62,11 @@ class AuthRepositoryImpl(
             return authResponse
         }
 
-        throw when (response.code()) {
-            401 -> Exception("Correo o contraseña incorrectos.")
-            else -> Exception("No se pudo iniciar sesión.")
-        }
+        throw AuthException(when (response.code()) {
+            401 -> AuthFailure.WRONG_CREDENTIALS
+            400, 422 -> AuthFailure.INVALID_DATA
+            else -> AuthFailure.SERVER
+        })
     }
 
     override suspend fun register(
@@ -99,10 +100,11 @@ class AuthRepositoryImpl(
             return authResponse
         }
 
-        throw when (response.code()) {
-            409 -> Exception("Ya existe una cuenta con ese correo.")
-            else -> Exception("No se pudo crear la cuenta.")
-        }
+        throw AuthException(when (response.code()) {
+            409 -> AuthFailure.EMAIL_REGISTERED
+            400, 422 -> AuthFailure.INVALID_DATA
+            else -> AuthFailure.SERVER
+        })
     }
 
     override suspend fun restoreSession(): UserDto? {

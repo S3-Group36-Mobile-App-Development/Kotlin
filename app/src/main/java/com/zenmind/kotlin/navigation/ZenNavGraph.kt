@@ -28,6 +28,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.zenmind.kotlin.ZenMindApplication
 import com.zenmind.kotlin.core.storage.TokenStorage
+import com.zenmind.kotlin.core.network.ConnectivityObserver
 import com.zenmind.kotlin.features.authentication.data.repositories.AuthRepositoryImpl
 import com.zenmind.kotlin.features.authentication.data.services.AuthServiceProvider
 import com.zenmind.kotlin.features.authentication.data.services.GoogleSignInService
@@ -104,7 +105,8 @@ fun ZenNavGraph() {
 
     val authViewModelFactory = remember {
         AuthViewModelFactory(
-            authRepository = authRepository
+            authRepository = authRepository,
+            isOnline = ConnectivityObserver(context.applicationContext)::isOnline
         )
     }
 
@@ -326,6 +328,7 @@ fun ZenNavGraph() {
 
             RegisterScreen(
                 viewModel = authViewModel,
+                onLoginClick = { navController.navigate(Routes.LOGIN) },
 
                 onBack = {
                     navController.popBackStack()
