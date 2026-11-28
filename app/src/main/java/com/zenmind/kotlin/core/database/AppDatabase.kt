@@ -22,6 +22,10 @@ import com.zenmind.kotlin.features.panicbutton.data.ContactEntity
 import com.zenmind.kotlin.features.protocols.data.db.ProtocolDao
 import com.zenmind.kotlin.features.protocols.data.db.ProtocolEntity
 import com.zenmind.kotlin.features.protocols.data.db.StepsConverter
+import com.zenmind.kotlin.features.flashcards.data.local.FlashcardDao
+import com.zenmind.kotlin.features.flashcards.data.local.FlashcardReactionEntity
+import com.zenmind.kotlin.features.flashcards.data.local.FlashcardTemaEntity
+import com.zenmind.kotlin.features.flashcards.data.local.FlashcardCardEntity
 
 val MIGRATION_4_5 = object : Migration(4, 5) {
     override fun migrate(db: SupportSQLiteDatabase) {
@@ -58,9 +62,34 @@ val MIGRATION_6_7 = object : Migration(6, 7) {
 
 val MIGRATION_7_8 = object : Migration(7, 8) {
     override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("""CREATE TABLE IF NOT EXISTS `pending_flashcard_reactions` (
+            `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+            `flashcardId` TEXT NOT NULL,
+            `tipo` TEXT NOT NULL,
+            `synced` INTEGER NOT NULL)""")
+        db.execSQL("""CREATE TABLE IF NOT EXISTS `flashcard_temas` (
+            `id` TEXT NOT NULL PRIMARY KEY,
+            `titulo` TEXT NOT NULL,
+            `categoria` TEXT NOT NULL,
+            `iconType` TEXT NOT NULL,
+            `cardsCount` INTEGER NOT NULL,
+            `totalLikes` INTEGER NOT NULL,
+            `totalDislikes` INTEGER NOT NULL)""")
+        db.execSQL("""CREATE TABLE IF NOT EXISTS `flashcard_cards` (
+            `id` TEXT NOT NULL PRIMARY KEY,
+            `temaId` TEXT NOT NULL,
+            `titulo` TEXT NOT NULL,
+            `contenido` TEXT NOT NULL,
+            `fuente` TEXT NOT NULL,
+            `likeCount` INTEGER NOT NULL,
+            `dislikeCount` INTEGER NOT NULL)""")
         db.execSQL("""CREATE TABLE IF NOT EXISTS `protocol_table` (
-            `id` INTEGER NOT NULL, `userId` TEXT NOT NULL, `titulo` TEXT NOT NULL,
-            `esPredefinido` INTEGER NOT NULL, `pasos` TEXT NOT NULL, `synced` INTEGER NOT NULL,
+            `id` INTEGER NOT NULL,
+            `userId` TEXT NOT NULL,
+            `titulo` TEXT NOT NULL,
+            `esPredefinido` INTEGER NOT NULL,
+            `pasos` TEXT NOT NULL,
+            `synced` INTEGER NOT NULL,
             PRIMARY KEY(`id`, `userId`))""")
     }
 }
@@ -73,10 +102,14 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
         BreathingExerciseEntity::class,
         GameSessionEntity::class,
         ContactEntity::class,
-        ProtocolEntity::class],
+        FlashcardReactionEntity::class,
+        FlashcardTemaEntity::class,
+        FlashcardCardEntity::class,
+        ProtocolEntity::class
+    ],
     version = 8,
     exportSchema = false
-    )
+)
 @TypeConverters(StepsConverter::class)
 abstract class AppDatabase : RoomDatabase() {
 
@@ -85,9 +118,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun breathingSessionDao(): BreathingSessionDao
     abstract fun breathingExerciseDao(): BreathingExerciseDao
     abstract fun gameSessionDao(): GameSessionDao
-
     abstract fun panicButtonDao(): ContactDao
-
+    abstract fun flashcardDao(): FlashcardDao
     abstract fun protocolDao(): ProtocolDao
 
     companion object {
