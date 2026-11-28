@@ -5,5 +5,6 @@ import com.zenmind.kotlin.R
 //Accesos del homepage
 enum class HomeFeature(val label: String, val warm: Boolean, val image: Int) {
     BREATHING("Respira", false, R.drawable.breathing_button),
-    GAMES("Juegos", true, R.drawable.protocols_button)
+    GAMES("Juegos", true, R.drawable.games_button),
+    PROTOCOLS("Protocolos", false, R.drawable.protocols_button)
 }

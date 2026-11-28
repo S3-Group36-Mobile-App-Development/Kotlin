@@ -45,6 +45,10 @@ import com.zenmind.kotlin.features.dailycheckin.view.DailyCheckInScreen
 import com.zenmind.kotlin.features.home.model.HomeFeature
 import com.zenmind.kotlin.features.home.view.HomeScreen
 import com.zenmind.kotlin.features.games.view.BubbleGameScreen
+import com.zenmind.kotlin.features.protocols.view.CreateProtocolScreen
+import com.zenmind.kotlin.features.protocols.view.ProtocolDetailScreen
+import com.zenmind.kotlin.features.protocols.view.ProtocolsListScreen
+import com.zenmind.kotlin.features.protocols.viewmodel.ProtocolsViewModel
 import com.zenmind.kotlin.features.games.data.GameSyncScheduler
 import com.zenmind.kotlin.features.panicbutton.viewmodel.ContactViewModel
 import com.zenmind.kotlin.features.panicbutton.viewmodel.ContactViewModelFactory
@@ -69,6 +73,11 @@ object Routes {
     const val GAMES = "games"
     const val PANIC = "panic"
     const val PANIC_ADD = "panic_add"
+    const val PROTOCOLS = "protocols"
+    const val PROTOCOL_CREATE = "protocol_create"
+    const val PROTOCOL_DETAIL = "protocol/{id}"
+
+    fun protocolDetail(id: Long) = "protocol/$id"
 
     fun breathingSession(exerciseId: Int = -1) = "breathing?exerciseId=$exerciseId"
 }
@@ -390,6 +399,7 @@ fun ZenNavGraph() {
                         when (feature) {
                             HomeFeature.BREATHING -> navController.navigate(Routes.BREATHING)
                             HomeFeature.GAMES -> navController.navigate(Routes.GAMES)
+                            HomeFeature.PROTOCOLS -> navController.navigate(Routes.PROTOCOLS)
                         }
                     }
                 }
@@ -427,6 +437,38 @@ fun ZenNavGraph() {
 
         composable(Routes.GAMES) { entry ->
             BubbleGameScreen(onBack = { if (entry.isResumed()) navController.popBackStack() })
+        }
+
+        composable(Routes.PROTOCOLS) { entry ->
+            val protocolsViewModel: ProtocolsViewModel = viewModel(factory = ProtocolsViewModel.Factory)
+            ProtocolsListScreen(
+                viewModel = protocolsViewModel,
+                onBack = { if (entry.isResumed()) navController.popBackStack() },
+                onOpen = { id -> if (entry.isResumed()) navController.navigate(Routes.protocolDetail(id)) },
+                onCreate = { if (entry.isResumed()) navController.navigate(Routes.PROTOCOL_CREATE) }
+            )
+        }
+
+        composable(
+            route = Routes.PROTOCOL_DETAIL,
+            arguments = listOf(androidx.navigation.navArgument("id") { type = androidx.navigation.NavType.LongType })
+        ) { entry ->
+            val parent = remember(entry) { navController.getBackStackEntry(Routes.PROTOCOLS) }
+            val protocolsViewModel: ProtocolsViewModel = viewModel(parent, factory = ProtocolsViewModel.Factory)
+            ProtocolDetailScreen(
+                viewModel = protocolsViewModel,
+                protocolId = entry.arguments?.getLong("id") ?: 0L,
+                onBack = { if (entry.isResumed()) navController.popBackStack() }
+            )
+        }
+
+        composable(Routes.PROTOCOL_CREATE) { entry ->
+            val parent = remember(entry) { navController.getBackStackEntry(Routes.PROTOCOLS) }
+            val protocolsViewModel: ProtocolsViewModel = viewModel(parent, factory = ProtocolsViewModel.Factory)
+            CreateProtocolScreen(
+                viewModel = protocolsViewModel,
+                onBack = { if (entry.isResumed()) navController.popBackStack() }
+            )
         }
 
     }
