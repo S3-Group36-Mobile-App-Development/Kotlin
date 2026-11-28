@@ -29,9 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -151,8 +149,8 @@ private fun FlashcardContentCard(
     viewModel: FlashcardDetailViewModel
 ) {
     val shape = RoundedCornerShape(28.dp)
-    var liked by remember(initialReaction) { mutableStateOf(initialReaction == "LIKE") }
-    var disliked by remember(initialReaction) { mutableStateOf(initialReaction == "DISLIKE") }
+    val liked = initialReaction == "LIKE"
+    val disliked = initialReaction == "DISLIKE"
 
     val borderColor = when (backgroundColor) {
         ZenFlashcard -> Color(0xFFD49A6A)
@@ -209,11 +207,8 @@ private fun FlashcardContentCard(
                 IconButton(
                     onClick = {
                         if (disliked) {
-                            disliked = false
                             viewModel.removeReaction(card.id, token)
                         } else {
-                            disliked = true
-                            liked = false
                             viewModel.reactToCard(card.id, "DISLIKE", token)
                         }
                     },
@@ -229,11 +224,8 @@ private fun FlashcardContentCard(
                 IconButton(
                     onClick = {
                         if (liked) {
-                            liked = false
                             viewModel.removeReaction(card.id, token)
                         } else {
-                            liked = true
-                            disliked = false
                             viewModel.reactToCard(card.id, "LIKE", token)
                         }
                     },
