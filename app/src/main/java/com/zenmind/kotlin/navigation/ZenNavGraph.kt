@@ -14,6 +14,8 @@ import androidx.compose.ui.res.painterResource
 import com.zenmind.kotlin.R
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -34,6 +36,7 @@ import androidx.navigation.compose.rememberNavController
 import com.zenmind.kotlin.ZenMindApplication
 import com.zenmind.kotlin.core.storage.TokenStorage
 import com.zenmind.kotlin.core.network.ConnectivityObserver
+import com.zenmind.kotlin.core.network.ApiClient
 import com.zenmind.kotlin.features.authentication.data.repositories.AuthRepositoryImpl
 import com.zenmind.kotlin.features.authentication.data.services.AuthServiceProvider
 import com.zenmind.kotlin.features.authentication.data.services.GoogleSignInService
@@ -59,6 +62,9 @@ import com.zenmind.kotlin.features.protocols.view.CreateProtocolScreen
 import com.zenmind.kotlin.features.protocols.view.ProtocolDetailScreen
 import com.zenmind.kotlin.features.protocols.view.ProtocolsListScreen
 import com.zenmind.kotlin.features.protocols.viewmodel.ProtocolsViewModel
+import com.zenmind.kotlin.features.profile.view.ProfileScreen
+import com.zenmind.kotlin.features.profile.view.EditProfileScreen
+import com.zenmind.kotlin.features.profile.viewmodel.ProfileViewModel
 import com.zenmind.kotlin.features.games.data.GameSyncScheduler
 import com.zenmind.kotlin.features.panicbutton.viewmodel.ContactViewModel
 import com.zenmind.kotlin.features.panicbutton.viewmodel.ContactViewModelFactory
@@ -76,6 +82,8 @@ object Routes {
     const val REGISTER = "register"
 
     const val HOME = "home"
+    const val PROFILE = "profile"
+    const val PROFILE_EDIT = "profile_edit"
     const val DAILY_CHECKIN = "daily_checkin"
     const val SUPPORT = "support"
     const val BREATHING = "breathing"
@@ -118,6 +126,12 @@ fun ZenNavGraph() {
         )
     }
 
+    fun authorizeVerifiedAccount(userId: String) {
+        if (tokenStorage.getSessionUserId() == userId && app.container.connectivityObserver.isOnline()) {
+            ApiClient.setVerifiedAccessToken(tokenStorage.getAccessToken())
+        }
+    }
+
     val authRepository = remember {
         AuthRepositoryImpl(
             authApiService = AuthServiceProvider.service,
@@ -128,7 +142,23 @@ fun ZenNavGraph() {
     val authViewModelFactory = remember {
         AuthViewModelFactory(
             authRepository = authRepository,
-            isOnline = ConnectivityObserver(context.applicationContext)::isOnline
+            isOnline = ConnectivityObserver(context.applicationContext)::isOnline,
+            onAuthenticated = { user ->
+                if (app.container.connectivityObserver.isOnline()) {
+                    authorizeVerifiedAccount(user.id)
+                    app.container.onVerifiedSession(user.id)
+                    try {
+                        app.container.profileRepository.refreshProfile(user.id)
+                    } catch (exception: CancellationException) {
+                        throw exception
+                    } catch (_: Exception) { }
+                }
+            },
+            findOfflineUserId = app.container.profileRepository::offlineSessionUserId,
+            onSessionUnverified = {
+                ApiClient.setVerifiedAccessToken(null)
+                app.container.profileRepository.markUnverified()
+            }
         )
     }
 
@@ -137,6 +167,9 @@ fun ZenNavGraph() {
     )
 
     val authState by authViewModel.uiState.collectAsState()
+    val activeUserId by authViewModel.activeUserId.collectAsState()
+    val offlineSession by authViewModel.offlineSession.collectAsState()
+    val connectionMessages = remember { SnackbarHostState() }
 
     val telemetry = (context.applicationContext as ZenMindApplication).container.telemetryRepository
     LaunchedEffect(navController) {
@@ -149,6 +182,31 @@ fun ZenNavGraph() {
         authViewModel.restoreSession()
     }
 
+    LaunchedEffect(Unit) {
+        var previous: Boolean? = null
+        app.container.connectivityObserver.onlineFlow.collect { online ->
+            authViewModel.onConnectivityChanged(online)
+            if (previous != null && previous != online) {
+                launch {
+                    connectionMessages.showSnackbar(
+                        if (online) "Conexión restablecida" else "Sin conexión a internet"
+                    )
+                }
+            }
+            previous = online
+        }
+    }
+
+    LaunchedEffect(authState) {
+        if (authState is AuthUiState.SessionInvalidated) {
+            navController.navigate(Routes.WELCOME) {
+                popUpTo(Routes.HOME) { inclusive = true }
+                launchSingleTop = true
+            }
+        }
+    }
+
+    Box(Modifier.fillMaxSize()) {
     NavHost(
         navController = navController,
         startDestination = Routes.AUTH_GATE
@@ -198,6 +256,15 @@ fun ZenNavGraph() {
                                 inclusive = true
                             }
 
+                            launchSingleTop = true
+                        }
+                    }
+                }
+
+                is AuthUiState.OfflineSession -> {
+                    LaunchedEffect(state.userId) {
+                        navController.navigate(Routes.HOME) {
+                            popUpTo(Routes.AUTH_GATE) { inclusive = true }
                             launchSingleTop = true
                         }
                     }
@@ -358,6 +425,8 @@ fun ZenNavGraph() {
                 },
 
                 onLoginSuccess = {
+                    val user = (authViewModel.uiState.value as? AuthUiState.Success)?.user
+                    user?.let { authorizeVerifiedAccount(it.id) }
                     scheduleGamesAfterLogin()
 
                     navController.navigate(
@@ -392,6 +461,8 @@ fun ZenNavGraph() {
                 },
 
                 onRegisterSuccess = {
+                    val user = (authViewModel.uiState.value as? AuthUiState.Success)?.user
+                    user?.let { authorizeVerifiedAccount(it.id) }
                     scheduleGamesAfterLogin()
 
                     navController.navigate(
@@ -418,23 +489,10 @@ fun ZenNavGraph() {
         composable(Routes.HOME) { entry ->
 
             HomeScreen(
+                offlineSession = offlineSession,
 
-                onLogoutClick = {
-
-                    authViewModel.logout()
-
-                    navController.navigate(
-                        Routes.WELCOME
-                    ) {
-
-                        popUpTo(
-                            Routes.HOME
-                        ) {
-                            inclusive = true
-                        }
-
-                        launchSingleTop = true
-                    }
+                onProfileClick = {
+                    if (entry.isResumed()) navController.navigate(Routes.PROFILE)
                 },
 
                 onContinueClick = {
@@ -453,6 +511,49 @@ fun ZenNavGraph() {
                         }
                     }
                 }
+            )
+        }
+
+        composable(Routes.PROFILE) { entry ->
+            val profileViewModel: ProfileViewModel = viewModel(factory = ProfileViewModel.Factory)
+            ProfileScreen(
+                userId = activeUserId,
+                offlineSession = offlineSession,
+                viewModel = profileViewModel,
+                onBack = {
+                    if (entry.isResumed()) navController.popBackStack()
+                },
+                onLogout = {
+                    if (entry.isResumed()) {
+                        authViewModel.logout()
+                        navController.navigate(Routes.WELCOME) {
+                            popUpTo(Routes.HOME) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    }
+                },
+                onEdit = { if (entry.isResumed()) navController.navigate(Routes.PROFILE_EDIT) },
+                onVerify = authViewModel::verifySessionAgain,
+                onLogin = {
+                    if (entry.isResumed()) {
+                        authViewModel.logout()
+                        navController.navigate(Routes.WELCOME) {
+                            popUpTo(Routes.HOME) { inclusive = true }
+                        }
+                        navController.navigate(Routes.LOGIN)
+                    }
+                }
+
+            )
+        }
+
+        composable(Routes.PROFILE_EDIT) { entry ->
+            val parent = remember(entry) { navController.getBackStackEntry(Routes.PROFILE) }
+            val profileViewModel: ProfileViewModel = viewModel(parent, factory = ProfileViewModel.Factory)
+            EditProfileScreen(
+                userId = activeUserId,
+                viewModel = profileViewModel,
+                onBack = { if (entry.isResumed()) navController.popBackStack() }
             )
         }
 
@@ -529,6 +630,8 @@ fun ZenNavGraph() {
             )
         }
 
+    }
+    SnackbarHost(connectionMessages, modifier = Modifier.align(Alignment.BottomCenter))
     }
 }
 

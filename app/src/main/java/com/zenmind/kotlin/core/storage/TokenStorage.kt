@@ -27,13 +27,15 @@ class TokenStorage(
         private const val KEY_ALIAS = "zenmind_auth_key"
         private const val ACCESS_TOKEN_KEY = "access_token"
         private const val REFRESH_TOKEN_KEY = "refresh_token"
+        private const val USER_ID_KEY = "session_user_id"
     }
 
     fun saveTokens(
         accessToken: String,
-        refreshToken: String
+        refreshToken: String,
+        userId: String? = null
     ) {
-        preferences.edit()
+        val editor = preferences.edit()
             .putString(
                 ACCESS_TOKEN_KEY,
                 encrypt(accessToken)
@@ -42,8 +44,15 @@ class TokenStorage(
                 REFRESH_TOKEN_KEY,
                 encrypt(refreshToken)
             )
-            .apply()
+        if (userId != null) editor.putString(USER_ID_KEY, userId)
+        editor.apply()
     }
+
+    fun saveSessionUserId(userId: String) {
+        preferences.edit().putString(USER_ID_KEY, userId).apply()
+    }
+
+    fun getSessionUserId(): String? = preferences.getString(USER_ID_KEY, null)
 
     fun getAccessToken(): String? {
         val encryptedToken =
@@ -70,6 +79,7 @@ class TokenStorage(
         preferences.edit()
             .remove(ACCESS_TOKEN_KEY)
             .remove(REFRESH_TOKEN_KEY)
+            .remove(USER_ID_KEY)
             .apply()
     }
 

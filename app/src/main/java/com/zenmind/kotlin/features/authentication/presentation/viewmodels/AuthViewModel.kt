@@ -1,11 +1,13 @@
 package com.zenmind.kotlin.features.authentication.presentation.viewmodels
 
 import android.util.Patterns
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zenmind.kotlin.features.authentication.data.repositories.AuthException
 import com.zenmind.kotlin.features.authentication.data.repositories.AuthFailure
 import com.zenmind.kotlin.features.authentication.data.repositories.AuthRepository
+import com.zenmind.kotlin.features.authentication.data.models.UserDto
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,7 +18,10 @@ import java.io.IOException
 class AuthViewModel(
     private val authRepository: AuthRepository,
     private val isOnline: () -> Boolean = { true },
-    private val isValidEmail: (String) -> Boolean = { Patterns.EMAIL_ADDRESS.matcher(it.trim()).matches() }
+    private val isValidEmail: (String) -> Boolean = { Patterns.EMAIL_ADDRESS.matcher(it.trim()).matches() },
+    private val onAuthenticated: suspend (UserDto) -> Unit = {},
+    private val findOfflineUserId: suspend () -> String? = { null },
+    private val onSessionUnverified: () -> Unit = {}
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<AuthUiState>(
@@ -24,6 +29,12 @@ class AuthViewModel(
     )
 
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
+
+    private val _activeUserId = MutableStateFlow<String?>(null)
+    val activeUserId: StateFlow<String?> = _activeUserId.asStateFlow()
+    private val _offlineSession = MutableStateFlow(false)
+    val offlineSession: StateFlow<Boolean> = _offlineSession.asStateFlow()
+    private var checkingReconnect = false
 
     fun restoreSession() {
 
@@ -37,25 +48,47 @@ class AuthViewModel(
 
                 if (user != null) {
 
+                    _activeUserId.value = user.id
+                    _offlineSession.value = false
+                    loadProfileAfterAuthentication(user)
                     _uiState.value = AuthUiState.Success(
                         user = user
                     )
 
                 } else {
-
-                    _uiState.value = AuthUiState.Idle
+                    val hadOfflineSession = _offlineSession.value
+                    _activeUserId.value = null
+                    _offlineSession.value = false
+                    onSessionUnverified()
+                    _uiState.value = if (hadOfflineSession) AuthUiState.SessionInvalidated else AuthUiState.Idle
                 }
 
             } catch (exception: CancellationException) {
                 throw exception
             } catch (exception: IOException) {
-                _uiState.value = AuthUiState.SessionUnavailable(
-                    "No se pudo comprobar tu sesión. Comprueba tu conexión e inténtalo de nuevo."
-                )
+                val cachedUserId = if (!isOnline()) {
+                    try {
+                        findOfflineUserId()
+                    } catch (cancelled: CancellationException) {
+                        throw cancelled
+                    } catch (_: Exception) { null }
+                } else null
+                if (cachedUserId != null) {
+                    _activeUserId.value = cachedUserId
+                    _offlineSession.value = true
+                    onSessionUnverified()
+                    _uiState.value = AuthUiState.OfflineSession(cachedUserId)
+                } else {
+                    _uiState.value = AuthUiState.SessionUnavailable(
+                        "No se pudo comprobar tu sesión. Comprueba tu conexión e inténtalo de nuevo."
+                    )
+                }
             } catch (exception: Exception) {
                 _uiState.value = AuthUiState.SessionUnavailable(
                     "No se pudo comprobar tu sesión. Inténtalo de nuevo."
                 )
+            } finally {
+                checkingReconnect = false
             }
         }
     }
@@ -90,6 +123,9 @@ class AuthViewModel(
                     password = password
                 )
 
+                _activeUserId.value = response.usuario.id
+                _offlineSession.value = false
+                loadProfileAfterAuthentication(response.usuario)
                 _uiState.value = AuthUiState.Success(
                     user = response.usuario
                 )
@@ -127,6 +163,8 @@ class AuthViewModel(
                 }
 
                 val response = authRepository.loginWithGoogle(idToken)
+                _activeUserId.value = response.usuario.id
+                _offlineSession.value = false
                 _uiState.value = AuthUiState.Success(user = response.usuario)
             } catch (exception: CancellationException) {
                 throw exception
@@ -181,6 +219,9 @@ class AuthViewModel(
                     consentimientoDatos = acceptedDataConsent
                 )
 
+                _activeUserId.value = response.usuario.id
+                _offlineSession.value = false
+                loadProfileAfterAuthentication(response.usuario)
                 _uiState.value = AuthUiState.Success(
                     user = response.usuario
                 )
@@ -208,6 +249,18 @@ class AuthViewModel(
 
     fun resetState() {
         _uiState.value = AuthUiState.Idle
+    }
+
+    private fun loadProfileAfterAuthentication(user: UserDto) {
+        viewModelScope.launch {
+            try {
+                onAuthenticated(user)
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (exception: Exception) {
+                Log.w("Profile", "No se pudo guardar el perfil local.", exception)
+            }
+        }
     }
 
     private fun validateLogin(
@@ -270,7 +323,27 @@ class AuthViewModel(
 
     fun logout() {
         authRepository.logout()
+        _activeUserId.value = null
+        _offlineSession.value = false
+        onSessionUnverified()
         _uiState.value = AuthUiState.Idle
+    }
+
+    fun onConnectivityChanged(online: Boolean) {
+        if (!online && _activeUserId.value != null) {
+            _offlineSession.value = true
+            onSessionUnverified()
+        } else if (online && _offlineSession.value && !checkingReconnect) {
+            verifySessionAgain()
+        }
+    }
+
+    fun verifySessionAgain() {
+        if (_activeUserId.value == null || checkingReconnect) return
+        checkingReconnect = true
+        _offlineSession.value = true
+        onSessionUnverified()
+        restoreSession()
     }
 
 }

@@ -7,6 +7,7 @@ import com.zenmind.kotlin.features.authentication.presentation.viewmodels.AuthUi
 import com.zenmind.kotlin.features.authentication.presentation.viewmodels.AuthViewModel
 import com.zenmind.kotlin.rules.TestDispatcherRule
 import java.io.IOException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -90,6 +91,61 @@ class GoogleAuthViewModelTest {
         viewModel.restoreSession()
 
         assertEquals(AuthUiState.Idle, viewModel.uiState.value)
+    }
+
+    @Test
+    fun restoreSession_opensSessionWithoutWaitingForProfileDownload() = runTest {
+        val repository = FakeAuthRepository(AuthResponse(user, "access", "refresh"))
+        repository.restoredUser = user
+        val pendingDownload = CompletableDeferred<Unit>()
+        var downloadedUserId: String? = null
+        val viewModel = AuthViewModel(repository, onAuthenticated = {
+            downloadedUserId = it.id
+            pendingDownload.await()
+        })
+
+        viewModel.restoreSession()
+
+        assertEquals(user.id, downloadedUserId)
+        assertEquals(AuthUiState.Success(user), viewModel.uiState.value)
+        pendingDownload.complete(Unit)
+    }
+
+    @Test
+    fun restoreSession_offlineUsesStoredAccountAndRechecksOnReconnect() = runTest {
+        val repository = FakeAuthRepository(AuthResponse(user, "access", "refresh"))
+        repository.restoreError = IOException("Sin conexión")
+        var online = false
+        val viewModel = AuthViewModel(repository, isOnline = { online }, findOfflineUserId = { user.id })
+
+        viewModel.restoreSession()
+        assertEquals(AuthUiState.OfflineSession(user.id), viewModel.uiState.value)
+        assertEquals(user.id, viewModel.activeUserId.value)
+        assertEquals(true, viewModel.offlineSession.value)
+        assertEquals(0, repository.logoutCalls)
+
+        repository.restoreError = null
+        repository.restoredUser = user
+        online = true
+        viewModel.onConnectivityChanged(true)
+        assertEquals(AuthUiState.Success(user), viewModel.uiState.value)
+        assertEquals(false, viewModel.offlineSession.value)
+    }
+
+    @Test
+    fun invalidOfflineSessionRemovesAccessToCachedAccount() = runTest {
+        val repository = FakeAuthRepository(AuthResponse(user, "access", "refresh"))
+        repository.restoreError = IOException("Sin conexión")
+        var online = false
+        val viewModel = AuthViewModel(repository, isOnline = { online }, findOfflineUserId = { user.id })
+        viewModel.restoreSession()
+
+        repository.restoreError = null
+        online = true
+        viewModel.onConnectivityChanged(true)
+
+        assertEquals(AuthUiState.SessionInvalidated, viewModel.uiState.value)
+        assertEquals(null, viewModel.activeUserId.value)
     }
 
     private class FakeAuthRepository(private val response: AuthResponse) : AuthRepository {

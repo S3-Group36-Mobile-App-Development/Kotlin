@@ -3,10 +3,14 @@ package com.zenmind.kotlin.features.authentication.presentation.viewmodels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.zenmind.kotlin.features.authentication.data.repositories.AuthRepository
+import com.zenmind.kotlin.features.authentication.data.models.UserDto
 
 class AuthViewModelFactory(
     private val authRepository: AuthRepository,
-    private val isOnline: () -> Boolean
+    private val isOnline: () -> Boolean,
+    private val onAuthenticated: suspend (UserDto) -> Unit = {},
+    private val findOfflineUserId: suspend () -> String? = { null },
+    private val onSessionUnverified: () -> Unit = {}
 ) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")
@@ -17,7 +21,10 @@ class AuthViewModelFactory(
         if (modelClass.isAssignableFrom(AuthViewModel::class.java)) {
             return AuthViewModel(
                 authRepository = authRepository,
-                isOnline = isOnline
+                isOnline = isOnline,
+                onAuthenticated = onAuthenticated,
+                findOfflineUserId = findOfflineUserId,
+                onSessionUnverified = onSessionUnverified
             ) as T
         }
 

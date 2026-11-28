@@ -28,6 +28,11 @@ import com.zenmind.kotlin.features.flashcards.data.local.FlashcardDao
 import com.zenmind.kotlin.features.flashcards.data.local.FlashcardReactionEntity
 import com.zenmind.kotlin.features.flashcards.data.local.FlashcardTemaEntity
 import com.zenmind.kotlin.features.flashcards.data.local.FlashcardCardEntity
+import com.zenmind.kotlin.features.profile.data.local.ProfileDao
+import com.zenmind.kotlin.features.profile.data.local.ProfileEntity
+import com.zenmind.kotlin.features.profile.data.local.InstitutionEntity
+import com.zenmind.kotlin.features.profile.data.local.DepartmentEntity
+import com.zenmind.kotlin.features.profile.data.local.PendingProfileEntity
 
 val MIGRATION_4_5 = object : Migration(4, 5) {
     override fun migrate(db: SupportSQLiteDatabase) {
@@ -96,19 +101,45 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
     }
 }
 
-val MIGRATION_9_10 = object : Migration(9, 10) {
-    override fun migrate(db: SupportSQLiteDatabase) {
-        db.execSQL("ALTER TABLE `checkin_table` ADD COLUMN `cardTitle` TEXT")
-        db.execSQL("ALTER TABLE `checkin_table` ADD COLUMN `cardContent` TEXT")
-        db.execSQL("ALTER TABLE `checkin_table` ADD COLUMN `cardSource` TEXT")
-    }
-}
-
 val MIGRATION_8_9 = object : Migration(8, 9) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("""CREATE TABLE IF NOT EXISTS `emergency_contact_table` (
             `id` INTEGER NOT NULL, `nombre` TEXT NOT NULL, `telefono` TEXT NOT NULL,
             `relacion` TEXT, PRIMARY KEY(`id`))""")
+        db.execSQL("""CREATE TABLE IF NOT EXISTS `profiles` (
+            `userId` TEXT NOT NULL, `email` TEXT NOT NULL, `name` TEXT NOT NULL,
+            `createdAt` TEXT NOT NULL, `institutionId` TEXT, `departmentId` TEXT,
+            `currentStreak` INTEGER, `bestStreak` INTEGER, PRIMARY KEY(`userId`))""")
+        db.execSQL("""CREATE TABLE IF NOT EXISTS `institutions` (
+            `id` TEXT NOT NULL, `name` TEXT NOT NULL, `type` TEXT NOT NULL, PRIMARY KEY(`id`))""")
+        db.execSQL("""CREATE TABLE IF NOT EXISTS `departments` (
+            `id` TEXT NOT NULL, `institutionId` TEXT NOT NULL, `name` TEXT NOT NULL, PRIMARY KEY(`id`))""")
+    }
+}
+
+val MIGRATION_9_10 = object : Migration(9, 10) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("""CREATE TABLE IF NOT EXISTS `pending_profile_changes` (
+            `userId` TEXT NOT NULL, `pendingName` TEXT, `pendingInstitutionId` TEXT,
+            `pendingDepartmentId` TEXT, PRIMARY KEY(`userId`))""")
+        // Version 9 existed in both branches. Add only columns not already present.
+        val columns = mutableSetOf<String>()
+        db.query("PRAGMA table_info(`checkin_table`)").use { cursor ->
+            val nameIndex = cursor.getColumnIndexOrThrow("name")
+            while (cursor.moveToNext()) columns.add(cursor.getString(nameIndex))
+        }
+        for (column in listOf("cardTitle", "cardContent", "cardSource")) {
+            if (column !in columns) db.execSQL("ALTER TABLE `checkin_table` ADD COLUMN `$column` TEXT")
+        }
+    }
+}
+
+// Both branches shipped version 10 with different additive tables/columns.
+// Complete either schema without replacing existing records.
+val MIGRATION_10_11 = object : Migration(10, 11) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        MIGRATION_8_9.migrate(db)
+        MIGRATION_9_10.migrate(db)
     }
 }
 
@@ -124,9 +155,13 @@ val MIGRATION_8_9 = object : Migration(8, 9) {
         FlashcardTemaEntity::class,
         FlashcardCardEntity::class,
         ProtocolEntity::class,
+        ProfileEntity::class,
+        InstitutionEntity::class,
+        DepartmentEntity::class,
+        PendingProfileEntity::class,
         EmergencyContactEntity::class
     ],
-    version = 10,
+    version = 11,
     exportSchema = false
 )
 @TypeConverters(StepsConverter::class)
@@ -140,6 +175,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun panicButtonDao(): ContactDao
     abstract fun flashcardDao(): FlashcardDao
     abstract fun protocolDao(): ProtocolDao
+    abstract fun profileDao(): ProfileDao
     abstract fun emergencyContactDao(): EmergencyContactDao
 
     companion object {
@@ -151,7 +187,7 @@ abstract class AppDatabase : RoomDatabase() {
                 synchronized(this) {
                     if (instance == null) {
                         instance = Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "zenmind_db")
-                            .addMigrations(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
+                            .addMigrations(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
                             .build()
                     }
                 }
