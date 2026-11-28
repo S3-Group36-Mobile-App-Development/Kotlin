@@ -1,12 +1,17 @@
 package com.zenmind.kotlin.navigation
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.res.painterResource
+import com.zenmind.kotlin.R
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
@@ -41,6 +46,8 @@ import com.zenmind.kotlin.features.breathing.view.BreathingSessionScreen
 import com.zenmind.kotlin.features.breathing.view.BreathingCatalogScreen
 import com.zenmind.kotlin.features.panicbutton.view.SupportNetworkScreen
 import com.zenmind.kotlin.features.panicbutton.view.AddContactScreen
+import com.zenmind.kotlin.features.flashcards.view.FlashcardsScreen
+import com.zenmind.kotlin.features.flashcards.view.FlashcardDetailScreen
 import com.zenmind.kotlin.features.dailycheckin.view.DailyCheckInScreen
 import com.zenmind.kotlin.features.home.model.HomeFeature
 import com.zenmind.kotlin.features.home.view.HomeScreen
@@ -78,8 +85,11 @@ object Routes {
     const val PROTOCOL_DETAIL = "protocol/{id}"
 
     fun protocolDetail(id: Long) = "protocol/$id"
+    const val FLASHCARDS = "flashcards"
+    const val FLASHCARDS_DETAIL = "flashcards_detail?temaId={temaId}"
 
     fun breathingSession(exerciseId: Int = -1) = "breathing?exerciseId=$exerciseId"
+    fun flashcardsDetail(temaId: String) = "flashcards_detail?temaId=$temaId"
 }
 
 @Composable
@@ -151,10 +161,20 @@ fun ZenNavGraph() {
                             .background(ZenCream),
                         contentAlignment = Alignment.Center
                     ) {
-
-                        CircularProgressIndicator(
-                            color = ZenOrange
-                        )
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Image(
+                                painter = painterResource(R.drawable.zenmind_logo),
+                                contentDescription = "ZenMind Logo",
+                                modifier = Modifier.width(180.dp)
+                            )
+                            Spacer(Modifier.height(24.dp))
+                            CircularProgressIndicator(
+                                color = ZenOrange
+                            )
+                        }
                     }
                 }
 
@@ -257,6 +277,31 @@ fun ZenNavGraph() {
                         navController.popBackStack()
                     }
                 })
+        }
+
+        composable(Routes.FLASHCARDS) { entry ->
+            FlashcardsScreen(
+                onBack = { if (entry.isResumed()) navController.popBackStack() },
+                onCardClick = { temaId ->
+                    if (entry.isResumed()) navController.navigate(Routes.flashcardsDetail(temaId))
+                }
+            )
+        }
+
+        composable(
+            route = "flashcards_detail?temaId={temaId}",
+            arguments = listOf(
+                androidx.navigation.navArgument("temaId") {
+                    type = androidx.navigation.NavType.StringType
+                    defaultValue = "1"
+                }
+            )
+        ) { backStackEntry ->
+            val temaId = backStackEntry.arguments?.getString("temaId") ?: "1"
+            FlashcardDetailScreen(
+                temaId = temaId,
+                onBack = { if (backStackEntry.isResumed()) navController.popBackStack() }
+            )
         }
 
 
@@ -390,14 +435,18 @@ fun ZenNavGraph() {
                     if (entry.isResumed()) navController.navigate(Routes.DAILY_CHECKIN)
                 },
 
+                onPanicClick = {
+                    if (entry.isResumed()) navController.navigate(Routes.PANIC)
+                },
+
                 onFeatureClick = { feature ->
                     if (entry.isResumed()) {
                         when (feature) {
                             HomeFeature.BREATHING -> navController.navigate(Routes.BREATHING)
+                            HomeFeature.FLASHCARDS -> navController.navigate(Routes.FLASHCARDS)
                             HomeFeature.GAMES -> navController.navigate(Routes.GAMES)
                             HomeFeature.PROTOCOLS -> navController.navigate(Routes.PROTOCOLS)
-                            HomeFeature.SUPPORT -> navController.navigate(Routes.PANIC)
-                            HomeFeature.PANIC, HomeFeature.FLASHCARDS -> Unit
+                            HomeFeature.SUPPORT, HomeFeature.PANIC -> navController.navigate(Routes.PANIC)
                         }
                     }
                 }
