@@ -3,6 +3,8 @@ package com.zenmind.kotlin.features.authentication.presentation.viewmodels
 import android.util.Patterns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.zenmind.kotlin.features.authentication.data.repositories.AuthException
+import com.zenmind.kotlin.features.authentication.data.repositories.AuthFailure
 import com.zenmind.kotlin.features.authentication.data.repositories.AuthRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,7 +14,9 @@ import kotlinx.coroutines.launch
 import java.io.IOException
 
 class AuthViewModel(
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val isOnline: () -> Boolean = { true },
+    private val isValidEmail: (String) -> Boolean = { Patterns.EMAIL_ADDRESS.matcher(it.trim()).matches() }
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<AuthUiState>(
@@ -60,6 +64,7 @@ class AuthViewModel(
         email: String,
         password: String
     ) {
+        if (_uiState.value is AuthUiState.Loading) return
 
         val validationError = validateLogin(
             email = email,
@@ -75,9 +80,8 @@ class AuthViewModel(
             return
         }
 
+        _uiState.value = AuthUiState.Loading
         viewModelScope.launch {
-
-            _uiState.value = AuthUiState.Loading
 
             try {
 
@@ -90,12 +94,21 @@ class AuthViewModel(
                     user = response.usuario
                 )
 
-            } catch (exception: Exception) {
-
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (exception: AuthException) {
+                _uiState.value = AuthUiState.Error(when (exception.reason) {
+                    AuthFailure.WRONG_CREDENTIALS -> "Correo o contraseña incorrectos."
+                    AuthFailure.INVALID_DATA -> "Revisa los datos ingresados."
+                    else -> "El servidor presenta problemas temporales. Inténtalo más tarde."
+                })
+            } catch (exception: IOException) {
                 _uiState.value = AuthUiState.Error(
-                    message = exception.message
-                        ?: "Ocurrió un error al iniciar sesión."
+                    if (isOnline()) "No se pudo contactar al servidor. Inténtalo más tarde."
+                    else "Sin conexión a internet. Comprueba tu conexión e inténtalo de nuevo."
                 )
+            } catch (exception: Exception) {
+                _uiState.value = AuthUiState.Error("No se pudo iniciar sesión. Inténtalo de nuevo.")
             }
         }
     }
@@ -119,7 +132,7 @@ class AuthViewModel(
                 throw exception
             } catch (exception: Exception) {
                 _uiState.value = AuthUiState.Error(
-                    message = exception.message ?: "No se pudo continuar con Google."
+                    message = "No se pudo continuar con Google. Inténtalo de nuevo."
                 )
             }
         }
@@ -131,6 +144,7 @@ class AuthViewModel(
         password: String,
         acceptedDataConsent: Boolean
     ) {
+        if (_uiState.value is AuthUiState.Loading) return
 
         val validationError = validateRegister(
             name = name,
@@ -148,9 +162,15 @@ class AuthViewModel(
             return
         }
 
-        viewModelScope.launch {
+        if (!isOnline()) {
+            _uiState.value = AuthUiState.Error(
+                "Sin conexión a internet. Comprueba tu conexión antes de crear la cuenta."
+            )
+            return
+        }
 
-            _uiState.value = AuthUiState.Loading
+        _uiState.value = AuthUiState.Loading
+        viewModelScope.launch {
 
             try {
 
@@ -165,12 +185,23 @@ class AuthViewModel(
                     user = response.usuario
                 )
 
-            } catch (exception: Exception) {
-
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (exception: AuthException) {
+                _uiState.value = when (exception.reason) {
+                    AuthFailure.EMAIL_REGISTERED -> AuthUiState.Error(
+                        "Ese correo ya tiene una cuenta. Intenta iniciar sesión.", offerLogin = true
+                    )
+                    AuthFailure.INVALID_DATA -> AuthUiState.Error("Revisa los datos ingresados.")
+                    else -> AuthUiState.Error("El servidor presenta problemas temporales. Inténtalo más tarde.")
+                }
+            } catch (exception: IOException) {
                 _uiState.value = AuthUiState.Error(
-                    message = exception.message
-                        ?: "Ocurrió un error al crear la cuenta."
+                    "No pudimos confirmar si tu cuenta se creó. Intenta iniciar sesión o vuelve a intentar el registro.",
+                    offerLogin = true
                 )
+            } catch (exception: Exception) {
+                _uiState.value = AuthUiState.Error("No se pudo crear la cuenta. Inténtalo de nuevo.")
             }
         }
     }
@@ -188,7 +219,7 @@ class AuthViewModel(
             return "Ingresa tu correo electrónico."
         }
 
-        if (!Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()) {
+        if (!isValidEmail(email)) {
             return "Ingresa un correo electrónico válido."
         }
 
@@ -218,7 +249,7 @@ class AuthViewModel(
             return "Ingresa tu correo electrónico."
         }
 
-        if (!Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()) {
+        if (!isValidEmail(email)) {
             return "Ingresa un correo electrónico válido."
         }
 
@@ -241,4 +272,5 @@ class AuthViewModel(
         authRepository.logout()
         _uiState.value = AuthUiState.Idle
     }
+
 }

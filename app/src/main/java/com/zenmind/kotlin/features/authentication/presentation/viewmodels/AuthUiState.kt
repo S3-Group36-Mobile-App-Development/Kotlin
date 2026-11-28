@@ -17,6 +17,7 @@ sealed interface AuthUiState {
     ) : AuthUiState
 
     data class Error(
-        val message: String
+        val message: String,
+        val offerLogin: Boolean = false
     ) : AuthUiState
 }
