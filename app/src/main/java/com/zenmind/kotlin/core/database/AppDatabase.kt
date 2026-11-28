@@ -96,6 +96,14 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
     }
 }
 
+val MIGRATION_9_10 = object : Migration(9, 10) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `checkin_table` ADD COLUMN `cardTitle` TEXT")
+        db.execSQL("ALTER TABLE `checkin_table` ADD COLUMN `cardContent` TEXT")
+        db.execSQL("ALTER TABLE `checkin_table` ADD COLUMN `cardSource` TEXT")
+    }
+}
+
 val MIGRATION_8_9 = object : Migration(8, 9) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("""CREATE TABLE IF NOT EXISTS `emergency_contact_table` (
@@ -118,7 +126,7 @@ val MIGRATION_8_9 = object : Migration(8, 9) {
         ProtocolEntity::class,
         EmergencyContactEntity::class
     ],
-    version = 9,
+    version = 10,
     exportSchema = false
 )
 @TypeConverters(StepsConverter::class)
@@ -143,7 +151,7 @@ abstract class AppDatabase : RoomDatabase() {
                 synchronized(this) {
                     if (instance == null) {
                         instance = Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "zenmind_db")
-                            .addMigrations(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
+                            .addMigrations(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
                             .build()
                     }
                 }

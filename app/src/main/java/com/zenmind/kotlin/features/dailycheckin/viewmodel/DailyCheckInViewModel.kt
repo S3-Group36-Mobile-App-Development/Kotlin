@@ -122,6 +122,7 @@ class DailyCheckInViewModel(
                     SaveResult.PENDING -> "Check-in guardado en el teléfono. Se enviará cuando vuelvas a tener conexión."
                     SaveResult.GUEST -> "Check-in guardado solo en el teléfono como invitado."
                     SaveResult.ALREADY_REGISTERED -> "Ya ingresaste tu Check-in de hoy."
+                    SaveResult.LOCAL_ONLY -> "Check-in guardado solo en el teléfono. El servidor no lo aceptó para tu cuenta."
                 }
 
                 if (result == SaveResult.ALREADY_REGISTERED) {

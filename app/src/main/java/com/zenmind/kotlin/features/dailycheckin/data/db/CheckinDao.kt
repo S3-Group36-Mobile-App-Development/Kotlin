@@ -19,6 +19,9 @@ interface CheckinDao {
     @Query("UPDATE checkin_table SET synced = 1 WHERE id = :id")
     suspend fun markSynced(id: Long)
 
-    @Query("UPDATE checkin_table SET moodId = :moodId, moodName = :moodName, note = :note, synced = 1 WHERE id = :id")
+    @Query("UPDATE checkin_table SET moodId = :moodId, moodName = :moodName, note = :note, synced = 1, cardTitle = NULL, cardContent = NULL, cardSource = NULL WHERE id = :id")
     suspend fun replaceWithServer(id: Long, moodId: Long, moodName: String, note: String?)
+
+    @Query("UPDATE checkin_table SET cardTitle = :title, cardContent = :content, cardSource = :source WHERE date = :date AND userId = :userId")
+    suspend fun saveCard(date: String, userId: String, title: String, content: String, source: String?)
 }
