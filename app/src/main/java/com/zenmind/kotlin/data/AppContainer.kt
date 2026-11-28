@@ -14,12 +14,16 @@ import com.zenmind.kotlin.features.dailycheckin.data.DailyCheckInRepository
 import com.zenmind.kotlin.features.dailycheckin.data.FlashcardsCache
 import com.zenmind.kotlin.features.dailycheckin.data.OfflineFirstDailyCheckInRepository
 import com.zenmind.kotlin.features.games.data.GameSyncScheduler
+import com.zenmind.kotlin.features.protocols.data.ProtocolApiService
+import com.zenmind.kotlin.features.protocols.data.ProtocolCache
+import com.zenmind.kotlin.features.protocols.data.ProtocolRepository
 import kotlinx.coroutines.CancellationException
 
 interface AppContainer {
     val dailyCheckInRepository: DailyCheckInRepository
     val telemetryRepository: TelemetryRepository
     val connectivityObserver: ConnectivityObserver
+    val protocolRepository: ProtocolRepository
 }
 
 class DefaultAppContainer(
@@ -55,6 +59,15 @@ class DefaultAppContainer(
         )
     }
 
+    override val protocolRepository: ProtocolRepository by lazy {
+        ProtocolRepository(
+            ApiClient.retrofit.create(ProtocolApiService::class.java),
+            database.protocolDao(),
+            ProtocolCache(),
+            tokenStorage
+        )
+    }
+
     override val telemetryRepository: TelemetryRepository by lazy {
         TelemetryRepository(ApiClient.retrofit.create(TelemetryApiService::class.java), applicationScope)
     }
@@ -69,6 +82,7 @@ class DefaultAppContainer(
                         catch (_: Exception) { }
                     }
                     runCatching { dailyCheckInRepository.syncPending() }
+                    runCatching { protocolRepository.syncPending() }
                 }
             }
         }
