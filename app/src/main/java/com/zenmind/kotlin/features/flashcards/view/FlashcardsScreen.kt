@@ -29,13 +29,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -48,7 +44,6 @@ import com.zenmind.kotlin.features.flashcards.viewmodel.FlashCardsViewModelFacto
 import com.zenmind.kotlin.ui.components.ZenTopBar
 import com.zenmind.kotlin.ui.theme.ShortStack
 import com.zenmind.kotlin.ui.theme.ZenCream
-import com.zenmind.kotlin.ui.theme.ZenLabel
 import com.zenmind.kotlin.ui.theme.ZenOrange
 import com.zenmind.kotlin.ui.theme.ZenPeach
 import com.zenmind.kotlin.ui.theme.ZenSubtle
@@ -63,14 +58,9 @@ fun FlashcardsScreen(
     )
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    var selectedTab by remember { mutableStateOf(0) } // 0 = Cards informativas, 1 = Protocolos
 
-    LaunchedEffect(selectedTab) {
-        if (selectedTab == 0) {
-            viewModel.loadTemas("INFORMATIVAS")
-        } else {
-            viewModel.loadTemas("PROTOCOLOS")
-        }
+    LaunchedEffect(Unit) {
+        viewModel.loadTemas(null) // Carga todos los temas directamente desde el backend
     }
 
     Box(
@@ -85,51 +75,11 @@ fun FlashcardsScreen(
                 .padding(horizontal = 24.dp, vertical = 12.dp)
         ) {
             ZenTopBar(
-                title = if (selectedTab == 0) "FLASHCARDS" else "Protocolos",
+                title = "FLASHCARDS",
                 onBack = onBack
             )
 
-            Spacer(Modifier.height(20.dp))
-
-            // Tabs / Filtros superiores
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(if (selectedTab == 0) ZenOrange else Color.Transparent)
-                        .border(1.dp, ZenOrange, RoundedCornerShape(20.dp))
-                        .clickable { selectedTab = 0 }
-                        .padding(horizontal = 20.dp, vertical = 10.dp)
-                ) {
-                    Text(
-                        text = "Cards informativas",
-                        color = if (selectedTab == 0) Color.White else ZenLabel,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(if (selectedTab == 1) ZenOrange else Color.Transparent)
-                        .border(1.dp, ZenOrange, RoundedCornerShape(20.dp))
-                        .clickable { selectedTab = 1 }
-                        .padding(horizontal = 20.dp, vertical = 10.dp)
-                ) {
-                    Text(
-                        text = "Protocolos",
-                        color = if (selectedTab == 1) Color.White else ZenLabel,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(24.dp))
 
             if (state.isLoading) {
                 Box(
@@ -141,7 +91,8 @@ fun FlashcardsScreen(
             } else {
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(14.dp),
-                    contentPadding = PaddingValues(vertical = 8.dp)
+                    contentPadding = PaddingValues(vertical = 8.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     items(
                         items = state.temas,
