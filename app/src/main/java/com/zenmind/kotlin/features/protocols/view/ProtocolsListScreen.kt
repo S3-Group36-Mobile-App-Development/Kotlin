@@ -75,14 +75,16 @@ fun ProtocolsListScreen(
             Spacer(Modifier.height(8.dp))
             ZenTopBar(title = "Protocolos", onBack = onBack)
             Spacer(Modifier.height(12.dp))
-            Text(
-                "Rutinas para momentos difíciles.",
-                fontFamily = Nunito,
-                fontSize = 13.sp,
-                color = ZenSubtle,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
+            if (!state.isGuest) {
+                Text(
+                    "Rutinas para momentos difíciles.",
+                    fontFamily = Nunito,
+                    fontSize = 13.sp,
+                    color = ZenSubtle,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
             Spacer(Modifier.height(16.dp))
 
             if (state.isOffline) {
