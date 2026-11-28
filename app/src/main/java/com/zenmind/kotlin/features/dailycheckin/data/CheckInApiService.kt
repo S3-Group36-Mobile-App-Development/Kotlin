@@ -5,7 +5,7 @@ import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
-import retrofit2.http.Query
+import retrofit2.http.Path
 
 interface CheckInApiService {
 
@@ -24,8 +24,11 @@ interface CheckInApiService {
         @Body request: CheckInRequest
     ): Response<Unit>
 
-    @GET("api/v1/flashcards")
-    suspend fun getFlashcards(@Query("categoria") category: String): List<FlashcardDto>
+    @GET("api/v1/flashcards/temas")
+    suspend fun getFlashcardTopics(): List<FlashcardTopicDto>
+
+    @GET("api/v1/flashcards/temas/{id}")
+    suspend fun getFlashcardTopic(@Path("id") id: Long): FlashcardTopicDetailDto
 }
 
 data class MoodDto(val id: String, val nombre: String, val orden: Int)
@@ -38,4 +41,8 @@ data class CheckInDto(val registradoEn: String, val estadoAnimo: MoodDto, val co
 
 data class CheckInRequest(val estadoAnimoId: Long, val comentario: String?)
 
-data class FlashcardDto(val categoria: String, val contenido: String)
+data class FlashcardTopicDto(val id: String, val titulo: String)
+
+data class FlashcardTopicDetailDto(val titulo: String, val cards: List<FlashcardDto>)
+
+data class FlashcardDto(val contenido: String, val fuente: String?)

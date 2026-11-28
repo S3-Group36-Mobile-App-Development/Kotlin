@@ -56,6 +56,8 @@ import com.zenmind.kotlin.features.dailycheckin.view.DailyCheckInScreen
 import com.zenmind.kotlin.features.home.model.HomeFeature
 import com.zenmind.kotlin.features.home.view.HomeScreen
 import com.zenmind.kotlin.features.games.view.BubbleGameScreen
+import com.zenmind.kotlin.features.panic.view.PanicScreen
+import com.zenmind.kotlin.features.panic.viewmodel.PanicViewModel
 import com.zenmind.kotlin.features.protocols.view.CreateProtocolScreen
 import com.zenmind.kotlin.features.protocols.view.ProtocolDetailScreen
 import com.zenmind.kotlin.features.protocols.view.ProtocolsListScreen
@@ -89,6 +91,7 @@ object Routes {
     const val GAMES = "games"
     const val PANIC = "panic"
     const val PANIC_ADD = "panic_add"
+    const val PANIC_BUTTON = "panic_button"
     const val PROTOCOLS = "protocols"
     const val PROTOCOL_CREATE = "protocol_create"
     const val PROTOCOL_DETAIL = "protocol/{id}"
@@ -496,10 +499,6 @@ fun ZenNavGraph() {
                     if (entry.isResumed()) navController.navigate(Routes.DAILY_CHECKIN)
                 },
 
-                onPanicClick = {
-                    if (entry.isResumed()) navController.navigate(Routes.PANIC)
-                },
-
                 onFeatureClick = { feature ->
                     if (entry.isResumed()) {
                         when (feature) {
@@ -507,7 +506,8 @@ fun ZenNavGraph() {
                             HomeFeature.FLASHCARDS -> navController.navigate(Routes.FLASHCARDS)
                             HomeFeature.GAMES -> navController.navigate(Routes.GAMES)
                             HomeFeature.PROTOCOLS -> navController.navigate(Routes.PROTOCOLS)
-                            HomeFeature.SUPPORT, HomeFeature.PANIC -> navController.navigate(Routes.PANIC)
+                            HomeFeature.SUPPORT -> navController.navigate(Routes.PANIC)
+                            HomeFeature.PANIC -> navController.navigate(Routes.PANIC_BUTTON)
                         }
                     }
                 }
@@ -588,6 +588,14 @@ fun ZenNavGraph() {
 
         composable(Routes.GAMES) { entry ->
             BubbleGameScreen(onBack = { if (entry.isResumed()) navController.popBackStack() })
+        }
+
+        composable(Routes.PANIC_BUTTON) { entry ->
+            val panicViewModel: PanicViewModel = viewModel(factory = PanicViewModel.Factory)
+            PanicScreen(
+                viewModel = panicViewModel,
+                onBack = { if (entry.isResumed()) navController.popBackStack() }
+            )
         }
 
         composable(Routes.PROTOCOLS) { entry ->

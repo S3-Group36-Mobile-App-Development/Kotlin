@@ -19,6 +19,8 @@ import com.zenmind.kotlin.features.breathing.data.local.BreathingExerciseEntity
 import com.zenmind.kotlin.features.breathing.data.local.BreathingExerciseDao
 import com.zenmind.kotlin.features.panicbutton.data.ContactDao
 import com.zenmind.kotlin.features.panicbutton.data.ContactEntity
+import com.zenmind.kotlin.features.panic.data.db.EmergencyContactDao
+import com.zenmind.kotlin.features.panic.data.db.EmergencyContactEntity
 import com.zenmind.kotlin.features.protocols.data.db.ProtocolDao
 import com.zenmind.kotlin.features.protocols.data.db.ProtocolEntity
 import com.zenmind.kotlin.features.protocols.data.db.StepsConverter
@@ -101,6 +103,9 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
 
 val MIGRATION_8_9 = object : Migration(8, 9) {
     override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("""CREATE TABLE IF NOT EXISTS `emergency_contact_table` (
+            `id` INTEGER NOT NULL, `nombre` TEXT NOT NULL, `telefono` TEXT NOT NULL,
+            `relacion` TEXT, PRIMARY KEY(`id`))""")
         db.execSQL("""CREATE TABLE IF NOT EXISTS `profiles` (
             `userId` TEXT NOT NULL, `email` TEXT NOT NULL, `name` TEXT NOT NULL,
             `createdAt` TEXT NOT NULL, `institutionId` TEXT, `departmentId` TEXT,
@@ -117,6 +122,24 @@ val MIGRATION_9_10 = object : Migration(9, 10) {
         db.execSQL("""CREATE TABLE IF NOT EXISTS `pending_profile_changes` (
             `userId` TEXT NOT NULL, `pendingName` TEXT, `pendingInstitutionId` TEXT,
             `pendingDepartmentId` TEXT, PRIMARY KEY(`userId`))""")
+        // Version 9 existed in both branches. Add only columns not already present.
+        val columns = mutableSetOf<String>()
+        db.query("PRAGMA table_info(`checkin_table`)").use { cursor ->
+            val nameIndex = cursor.getColumnIndexOrThrow("name")
+            while (cursor.moveToNext()) columns.add(cursor.getString(nameIndex))
+        }
+        for (column in listOf("cardTitle", "cardContent", "cardSource")) {
+            if (column !in columns) db.execSQL("ALTER TABLE `checkin_table` ADD COLUMN `$column` TEXT")
+        }
+    }
+}
+
+// Both branches shipped version 10 with different additive tables/columns.
+// Complete either schema without replacing existing records.
+val MIGRATION_10_11 = object : Migration(10, 11) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        MIGRATION_8_9.migrate(db)
+        MIGRATION_9_10.migrate(db)
     }
 }
 
@@ -135,9 +158,10 @@ val MIGRATION_9_10 = object : Migration(9, 10) {
         ProfileEntity::class,
         InstitutionEntity::class,
         DepartmentEntity::class,
-        PendingProfileEntity::class
+        PendingProfileEntity::class,
+        EmergencyContactEntity::class
     ],
-    version = 10,
+    version = 11,
     exportSchema = false
 )
 @TypeConverters(StepsConverter::class)
@@ -152,6 +176,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun flashcardDao(): FlashcardDao
     abstract fun protocolDao(): ProtocolDao
     abstract fun profileDao(): ProfileDao
+    abstract fun emergencyContactDao(): EmergencyContactDao
 
     companion object {
         @Volatile
@@ -162,7 +187,7 @@ abstract class AppDatabase : RoomDatabase() {
                 synchronized(this) {
                     if (instance == null) {
                         instance = Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "zenmind_db")
-                            .addMigrations(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
+                            .addMigrations(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
                             .build()
                     }
                 }

@@ -185,6 +185,7 @@ class ProfileDataTest {
         val name = "profile-pending-migration-test.db"
         context.deleteDatabase(name)
         context.openOrCreateDatabase(name, Context.MODE_PRIVATE, null).use { old ->
+            old.execSQL("CREATE TABLE checkin_table (id INTEGER NOT NULL PRIMARY KEY)")
             old.execSQL("CREATE TABLE game_sessions (id TEXT NOT NULL PRIMARY KEY)")
             old.execSQL("INSERT INTO game_sessions (id) VALUES ('saved-game')")
             old.execSQL("""CREATE TABLE profiles (userId TEXT NOT NULL PRIMARY KEY, email TEXT NOT NULL,
@@ -216,6 +217,77 @@ class ProfileDataTest {
             assertEquals(10, db.version)
         } finally {
             helper.close()
+            context.deleteDatabase(name)
+        }
+    }
+
+    @Test
+    fun mainVersion10MigratesTo11WithRoomValidation() = verifyVersion10Migration(profileBranch = false)
+
+    @Test
+    fun profileVersion10MigratesTo11WithRoomValidation() = verifyVersion10Migration(profileBranch = true)
+
+    private fun verifyVersion10Migration(profileBranch: Boolean) {
+        val name = "merge-migration-${if (profileBranch) "profile" else "main"}.db"
+        context.deleteDatabase(name)
+        val initial = Room.databaseBuilder(context, AppDatabase::class.java, name).build()
+        initial.openHelper.writableDatabase.apply {
+            execSQL("""INSERT INTO game_sessions VALUES ('saved-game', 1000, 0, 20,
+                '2026-01-01', 'PENDING', '1', 0)""")
+            execSQL("""INSERT INTO checkin_table (date, moodId, moodName, note, synced, userId)
+                VALUES ('2026-01-01', 1, 'Feliz', 'conservar', 0, '1')""")
+            if (profileBranch) {
+                execSQL("INSERT INTO profiles VALUES ('1', 'ana@example.com', 'Ana', '2026-01-01', NULL, NULL, 2, 4)")
+                execSQL("INSERT INTO pending_profile_changes VALUES ('1', 'Ana María', NULL, NULL)")
+            } else {
+                execSQL("INSERT INTO emergency_contact_table VALUES (1, 'Contacto', '123', NULL)")
+                execSQL("UPDATE checkin_table SET cardTitle = 'Card', cardContent = 'Contenido'")
+            }
+        }
+        initial.close()
+
+        // Reconstruct each shipped version-10 variant, keeping all unrelated tables.
+        context.openOrCreateDatabase(name, Context.MODE_PRIVATE, null).use { legacy ->
+            if (profileBranch) {
+                legacy.execSQL("DROP TABLE emergency_contact_table")
+                legacy.execSQL("ALTER TABLE checkin_table RENAME TO legacy_checkin")
+                legacy.execSQL("""CREATE TABLE checkin_table (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, date TEXT NOT NULL,
+                    moodId INTEGER NOT NULL, moodName TEXT NOT NULL, note TEXT,
+                    synced INTEGER NOT NULL, userId TEXT NOT NULL)""")
+                legacy.execSQL("""INSERT INTO checkin_table SELECT id, date, moodId, moodName,
+                    note, synced, userId FROM legacy_checkin""")
+                legacy.execSQL("DROP TABLE legacy_checkin")
+            } else {
+                for (table in listOf("profiles", "institutions", "departments", "pending_profile_changes")) {
+                    legacy.execSQL("DROP TABLE $table")
+                }
+            }
+            legacy.version = 10
+        }
+        val migrated = Room.databaseBuilder(context, AppDatabase::class.java, name)
+            .addMigrations(com.zenmind.kotlin.core.database.MIGRATION_10_11).build()
+        try {
+            // Opening through Room validates every table, not only the newly added ones.
+            val db = migrated.openHelper.writableDatabase
+            assertEquals(11, db.version)
+            db.query("SELECT id FROM game_sessions").use {
+                assertEquals(true, it.moveToFirst())
+                assertEquals("saved-game", it.getString(0))
+            }
+            db.query("SELECT note, cardTitle FROM checkin_table").use {
+                assertEquals(true, it.moveToFirst())
+                assertEquals("conservar", it.getString(0))
+                if (!profileBranch) assertEquals("Card", it.getString(1))
+            }
+            val query = if (profileBranch) "SELECT pendingName FROM pending_profile_changes"
+                else "SELECT nombre FROM emergency_contact_table"
+            db.query(query).use {
+                assertEquals(true, it.moveToFirst())
+                assertEquals(if (profileBranch) "Ana María" else "Contacto", it.getString(0))
+            }
+        } finally {
+            migrated.close()
             context.deleteDatabase(name)
         }
     }

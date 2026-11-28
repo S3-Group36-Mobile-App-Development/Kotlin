@@ -28,6 +28,7 @@ class FlashcardDetailViewModel(
             _uiState.update { it.copy(isLoading = true) }
             val tema = repository.getTemaDetail(temaId)
             val reactions = if (token.isNotBlank()) repository.getReacciones(token) else emptyMap()
+            android.util.Log.d("FlashcardDetailVM", "loadDetail loaded tema=${tema?.titulo}, reactionsCount=${reactions.size}")
             _uiState.update {
                 it.copy(
                     tema = tema,
@@ -39,31 +40,41 @@ class FlashcardDetailViewModel(
     }
 
     fun reactToCard(cardId: String, tipo: String, token: String) {
+        // Actualización optimista inmediata en UI
+        _uiState.update { current ->
+            val updated = current.userReactions.toMutableMap()
+            updated[cardId] = tipo
+            current.copy(userReactions = updated)
+        }
+
         viewModelScope.launch {
             val success = if (tipo == "LIKE") {
                 repository.likeCard(cardId, token)
             } else {
                 repository.dislikeCard(cardId, token)
             }
-            if (success) {
-                _uiState.update { current ->
-                    val updated = current.userReactions.toMutableMap()
-                    updated[cardId] = tipo
-                    current.copy(userReactions = updated)
-                }
+            android.util.Log.d("FlashcardDetailVM", "reactToCard cardId=$cardId, tipo=$tipo, success=$success")
+            if (!success && token.isNotBlank()) {
+                val reactions = repository.getReacciones(token)
+                _uiState.update { it.copy(userReactions = reactions) }
             }
         }
     }
 
     fun removeReaction(cardId: String, token: String) {
+        // Actualización optimista inmediata en UI
+        _uiState.update { current ->
+            val updated = current.userReactions.toMutableMap()
+            updated.remove(cardId)
+            current.copy(userReactions = updated)
+        }
+
         viewModelScope.launch {
             val success = repository.removeReaction(cardId, token)
-            if (success) {
-                _uiState.update { current ->
-                    val updated = current.userReactions.toMutableMap()
-                    updated.remove(cardId)
-                    current.copy(userReactions = updated)
-                }
+            android.util.Log.d("FlashcardDetailVM", "removeReaction cardId=$cardId, success=$success")
+            if (!success && token.isNotBlank()) {
+                val reactions = repository.getReacciones(token)
+                _uiState.update { it.copy(userReactions = reactions) }
             }
         }
     }

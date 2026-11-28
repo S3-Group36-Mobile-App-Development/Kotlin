@@ -38,6 +38,12 @@ class OfflineFirstDailyCheckInRepository(
     private val checkinDao: CheckinDao,
     private val moodDao: MoodDao
 ) : DailyCheckInRepository {
+    private val localDayFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+    private val utcDayFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }
+    private val utcInstantFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }
+    private var cachedToken: String? = null
+    private var cachedUserId: String = GUEST_ID
+
     private fun auth(): String =
         "Bearer ${checkNotNull(tokenStorage.getAccessToken())}"
 
@@ -131,6 +137,10 @@ class OfflineFirstDailyCheckInRepository(
                     keepServerCheckIn(checkin.id)
                     true
                 }
+                isDefinitiveRejection(response.code()) -> {
+                    checkinDao.markSynced(checkin.id)
+                    false
+                }
                 else -> false
             }
         } catch (e: IOException) {
@@ -138,25 +148,24 @@ class OfflineFirstDailyCheckInRepository(
         }
     }
 
-    private fun localToday(): String =
-        SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+    @Synchronized
+    private fun localToday(): String = localDayFormat.format(Date())
 
+    @Synchronized
     private fun toLocalDate(isoUtc: String): String? {
         return try {
-            val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
-            parser.timeZone = TimeZone.getTimeZone("UTC")
-            val instant = parser.parse(isoUtc.take(19)) ?: return null
-            SimpleDateFormat("yyyy-MM-dd", Locale.US).format(instant)
+            val instant = utcInstantFormat.parse(isoUtc.take(19)) ?: return null
+            localDayFormat.format(instant)
         } catch (e: Exception) {
             null
         }
     }
 
+    @Synchronized
     private fun streakFromDates(dates: List<String>): Streak {
         if (dates.isEmpty()) return Streak(0, 0)
-        val parser = SimpleDateFormat("yyyy-MM-dd", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }
-        val days = dates.mapNotNull { parser.parse(it)?.time?.div(DAY_MS) }.distinct().sortedDescending()
-        val today = parser.parse(localToday())!!.time / DAY_MS
+        val days = dates.mapNotNull { utcDayFormat.parse(it)?.time?.div(DAY_MS) }.distinct().sortedDescending()
+        val today = utcDayFormat.parse(localToday())!!.time / DAY_MS
 
         var current = 0
         if (days.first() >= today - 1) {
@@ -173,15 +182,19 @@ class OfflineFirstDailyCheckInRepository(
         return Streak(current, longest)
     }
 
+    @Synchronized
     private fun currentUserId(): String {
         val token = tokenStorage.getAccessToken() ?: return GUEST_ID
-        return try {
+        if (token == cachedToken) return cachedUserId
+        cachedUserId = try {
             val payload = token.split(".")[1]
             val json = String(Base64.decode(payload, Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP))
             JSONObject(json).getString("sub")
         } catch (e: Exception) {
             GUEST_ID
         }
+        cachedToken = token
+        return cachedUserId
     }
 
     override suspend fun saveCheckIn(mood: Mood, note: String?): SaveResult {
@@ -216,6 +229,10 @@ class OfflineFirstDailyCheckInRepository(
                     keepServerCheckIn(id)
                     SaveResult.ALREADY_REGISTERED
                 }
+                isDefinitiveRejection(response.code()) -> {
+                    checkinDao.markSynced(id)
+                    SaveResult.LOCAL_ONLY
+                }
                 else -> SaveResult.PENDING
             }
         } catch (e: IOException) {
@@ -223,33 +240,57 @@ class OfflineFirstDailyCheckInRepository(
         }
     }
 
-    private fun categoryFor(mood: Mood): String? = when (mood.name) {
-        "Ansioso" -> "Ansiedad"
-        "Estresado" -> "Estrés"
+    private fun topicFor(mood: Mood): String? = when (mood.name) {
+        "Feliz" -> "Self-community (apoyo mutuo)"
+        "Tranquilo" -> "Self-care (autocuidado)"
+        "Ansioso" -> "Entender la ansiedad"
+        "Triste" -> "Entender la depresión"
+        "Estresado" -> "Manejo del estrés"
         else -> null
     }
 
-    override fun hasRecommendation(mood: Mood): Boolean = categoryFor(mood) != null
+    override fun hasRecommendation(mood: Mood): Boolean = topicFor(mood) != null
 
     override suspend fun getRecommendedFlashcard(mood: Mood): Flashcard? {
-        val category = categoryFor(mood) ?: return null
+        val topic = topicFor(mood) ?: return null
+
+        flashcardsCache.getFlashcards(topic)?.firstOrNull()?.let {
+            Log.d("FlashcardsCache", "Fetching from the cache")
+            return it
+        }
+
+        val today = checkinDao.getByDate(localToday(), currentUserId())
+        val saved = today?.cardContent?.takeIf { today.moodName == mood.name }
+        if (saved != null) {
+            Log.d("FlashcardsCache", "Fetching from Room")
+            val flashcard = Flashcard(today.cardTitle ?: topic, saved, today.cardSource)
+            flashcardsCache.saveFlashcards(topic, listOf(flashcard))
+            return flashcard
+        }
+
         return try {
-            var flashcards = flashcardsCache.getFlashcards(category)
-            if (flashcards == null){
-                Log.d("FlashcardsCache", "Fetching from Network")
-                flashcards = api.getFlashcards(category).map { Flashcard(it.categoria, it.contenido)  }
-                if (flashcards.isNotEmpty()){
-                    flashcardsCache.saveFlashcards(category, flashcards)
-                }
-            } else {
-                Log.d("FlashcardsCache", "Fetching from the cache")
+            Log.d("FlashcardsCache", "Fetching from Network")
+            val flashcards = downloadFlashcards(topic)
+            if (flashcards.isNotEmpty()) {
+                flashcardsCache.saveFlashcards(topic, flashcards)
+                val first = flashcards.first()
+                checkinDao.saveCard(localToday(), currentUserId(), first.category, first.content, first.source)
             }
             flashcards.firstOrNull()
-        } catch (e: Exception){
-            Log.e("FlashcardsCache", "No se pudo obtener la flashcard de $category", e)
+        } catch (e: Exception) {
+            Log.e("FlashcardsCache", "No se pudo obtener la flashcard de $topic", e)
             null
         }
     }
+
+    private suspend fun downloadFlashcards(topic: String): List<Flashcard> {
+        val match = api.getFlashcardTopics().find { it.titulo == topic } ?: return emptyList()
+        val detail = api.getFlashcardTopic(match.id.toLong())
+        return detail.cards.map { Flashcard(detail.titulo, it.contenido, it.fuente) }
+    }
+
+    private fun isDefinitiveRejection(code: Int): Boolean =
+        code in 400..499 && code != 401 && code != 408 && code != 429
 
     private companion object {
         const val GUEST_ID = "guest"

@@ -128,51 +128,75 @@ class FlashCardsRepository(
 
     suspend fun getReacciones(token: String): Map<String, String> {
         return try {
+            android.util.Log.d("FlashcardsRepo", "Llamando GET /api/v1/flashcards/reacciones con token=${token.take(8)}...")
             val response = service.getReacciones("Bearer $token")
+            android.util.Log.d("FlashcardsRepo", "getReacciones code=${response.code()}, isSuccessful=${response.isSuccessful}")
             if (response.isSuccessful) {
-                response.body()?.associate { it.flashcardId to it.tipo } ?: emptyMap()
+                val body = response.body()
+                android.util.Log.d("FlashcardsRepo", "Reacciones recibidas: ${body?.size}, list=$body")
+                body?.associate { it.flashcardId to it.tipo } ?: emptyMap()
             } else {
+                android.util.Log.e("FlashcardsRepo", "Error getReacciones errorBody=${response.errorBody()?.string()}")
                 emptyMap()
             }
         } catch (e: Exception) {
+            android.util.Log.e("FlashcardsRepo", "Excepcion getReacciones: ${e.message}", e)
             emptyMap()
         }
     }
 
     suspend fun likeCard(cardId: String, token: String): Boolean {
         return try {
+            android.util.Log.d("FlashcardsRepo", "Llamando PUT /api/v1/flashcards/$cardId/reaccion con LIKE")
             val response = service.upsertReaccion(
                 authorization = "Bearer $token",
                 id = cardId,
                 request = ReaccionRequest(tipo = "LIKE")
             )
+            android.util.Log.d("FlashcardsRepo", "likeCard code=${response.code()}, success=${response.isSuccessful}")
+            if (!response.isSuccessful) {
+                android.util.Log.e("FlashcardsRepo", "likeCard errorBody=${response.errorBody()?.string()}")
+            }
             response.isSuccessful
         } catch (e: Exception) {
+            android.util.Log.e("FlashcardsRepo", "Excepcion likeCard: ${e.message}", e)
             false
         }
     }
 
     suspend fun dislikeCard(cardId: String, token: String): Boolean {
         return try {
+            android.util.Log.d("FlashcardsRepo", "Llamando PUT /api/v1/flashcards/$cardId/reaccion con DISLIKE")
             val response = service.upsertReaccion(
                 authorization = "Bearer $token",
                 id = cardId,
                 request = ReaccionRequest(tipo = "DISLIKE")
             )
+            android.util.Log.d("FlashcardsRepo", "dislikeCard code=${response.code()}, success=${response.isSuccessful}")
+            if (!response.isSuccessful) {
+                android.util.Log.e("FlashcardsRepo", "dislikeCard errorBody=${response.errorBody()?.string()}")
+            }
             response.isSuccessful
         } catch (e: Exception) {
+            android.util.Log.e("FlashcardsRepo", "Excepcion dislikeCard: ${e.message}", e)
             false
         }
     }
 
     suspend fun removeReaction(cardId: String, token: String): Boolean {
         return try {
+            android.util.Log.d("FlashcardsRepo", "Llamando DELETE /api/v1/flashcards/$cardId/reaccion")
             val response = service.deleteReaccion(
                 authorization = "Bearer $token",
                 id = cardId
             )
+            android.util.Log.d("FlashcardsRepo", "removeReaction code=${response.code()}, success=${response.isSuccessful}")
+            if (!response.isSuccessful) {
+                android.util.Log.e("FlashcardsRepo", "removeReaction errorBody=${response.errorBody()?.string()}")
+            }
             response.isSuccessful
         } catch (e: Exception) {
+            android.util.Log.e("FlashcardsRepo", "Excepcion removeReaction: ${e.message}", e)
             false
         }
     }

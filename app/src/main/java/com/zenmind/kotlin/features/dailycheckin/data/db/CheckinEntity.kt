@@ -11,5 +11,8 @@ data class CheckinEntity(
     val moodName: String,
     val note: String?,
     val synced: Boolean,
-    val userId: String
+    val userId: String,
+    val cardTitle: String? = null,
+    val cardContent: String? = null,
+    val cardSource: String? = null
 )
