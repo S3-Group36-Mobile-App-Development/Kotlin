@@ -14,6 +14,7 @@ import com.zenmind.kotlin.features.dailycheckin.data.DailyCheckInRepository
 import com.zenmind.kotlin.features.dailycheckin.data.FlashcardsCache
 import com.zenmind.kotlin.features.dailycheckin.data.OfflineFirstDailyCheckInRepository
 import com.zenmind.kotlin.features.games.data.GameSyncScheduler
+import com.zenmind.kotlin.features.panic.data.PanicRepository
 import com.zenmind.kotlin.features.protocols.data.ProtocolApiService
 import com.zenmind.kotlin.features.protocols.data.ProtocolCache
 import com.zenmind.kotlin.features.protocols.data.ProtocolRepository
@@ -24,6 +25,7 @@ interface AppContainer {
     val telemetryRepository: TelemetryRepository
     val connectivityObserver: ConnectivityObserver
     val protocolRepository: ProtocolRepository
+    val panicRepository: PanicRepository
 }
 
 class DefaultAppContainer(
@@ -57,6 +59,10 @@ class DefaultAppContainer(
             database.getCheckinDao(),
             database.getMoodDao()
         )
+    }
+
+    override val panicRepository: PanicRepository by lazy {
+        PanicRepository(database.emergencyContactDao())
     }
 
     override val protocolRepository: ProtocolRepository by lazy {
