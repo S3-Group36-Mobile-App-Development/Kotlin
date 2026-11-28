@@ -390,16 +390,14 @@ fun ZenNavGraph() {
                     if (entry.isResumed()) navController.navigate(Routes.DAILY_CHECKIN)
                 },
 
-                onPanicClick = {
-                    if (entry.isResumed()) navController.navigate(Routes.PANIC)
-                },
-
                 onFeatureClick = { feature ->
                     if (entry.isResumed()) {
                         when (feature) {
                             HomeFeature.BREATHING -> navController.navigate(Routes.BREATHING)
                             HomeFeature.GAMES -> navController.navigate(Routes.GAMES)
                             HomeFeature.PROTOCOLS -> navController.navigate(Routes.PROTOCOLS)
+                            HomeFeature.SUPPORT -> navController.navigate(Routes.PANIC)
+                            HomeFeature.PANIC, HomeFeature.FLASHCARDS -> Unit
                         }
                     }
                 }

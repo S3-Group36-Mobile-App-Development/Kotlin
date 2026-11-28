@@ -4,7 +4,10 @@ import com.zenmind.kotlin.R
 
 //Accesos del homepage
 enum class HomeFeature(val label: String, val warm: Boolean, val image: Int) {
+    PANIC("Pánico", true, R.drawable.panic_button),
     BREATHING("Respira", false, R.drawable.breathing_button),
-    GAMES("Juegos", true, R.drawable.games_button),
-    PROTOCOLS("Protocolos", false, R.drawable.protocols_button)
+    SUPPORT("Apoyo", false, R.drawable.support_button),
+    PROTOCOLS("Protocolos", true, R.drawable.protocols_button),
+    FLASHCARDS("Flashcards", true, R.drawable.flashcards_button),
+    GAMES("Juegos", false, R.drawable.games_button)
 }
