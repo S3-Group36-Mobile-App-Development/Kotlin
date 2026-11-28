@@ -8,6 +8,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.zenmind.kotlin.ZenMindApplication
 import com.zenmind.kotlin.core.network.ConnectivityObserver
+import com.zenmind.kotlin.core.telemetry.TelemetryRepository
 import com.zenmind.kotlin.features.protocols.data.ProtocolRepository
 import com.zenmind.kotlin.features.protocols.model.ProtocolsUiState
 import kotlinx.coroutines.CancellationException
@@ -22,13 +23,15 @@ import kotlinx.coroutines.withContext
 
 class ProtocolsViewModel(
     private val repository: ProtocolRepository,
-    private val connectivity: ConnectivityObserver
+    private val connectivity: ConnectivityObserver,
+    private val telemetry: TelemetryRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProtocolsUiState())
     val uiState: StateFlow<ProtocolsUiState> = _uiState.asStateFlow()
 
     init {
+        track("abierto")
         load()
         observeConnectivity()
     }
@@ -87,6 +90,10 @@ class ProtocolsViewModel(
         viewModelScope.launch(Dispatchers.Main) {
             val protocol = withContext(Dispatchers.IO) { repository.getProtocol(id) }
             _uiState.update { it.copy(selected = protocol, isLoadingDetail = false) }
+            if (protocol != null) {
+                track("visto", mapOf("protocolo" to protocol.titulo, "predefinido" to protocol.esPredefinido.toString()))
+                withContext(Dispatchers.IO) { repository.registerView(id) }
+            }
         }
     }
 
@@ -107,6 +114,7 @@ class ProtocolsViewModel(
                         message = if (sent) "Protocolo creado." else "Protocolo guardado en el teléfono. Se enviará cuando vuelvas a tener conexión."
                     )
                 }
+                track("creado", mapOf("pasos" to cleanSteps.size.toString(), "resultado" to if (sent) "enviado" else "pendiente"))
                 onDone()
             } catch (e: CancellationException) {
                 throw e
@@ -116,17 +124,24 @@ class ProtocolsViewModel(
         }
     }
 
+    private fun track(action: String, extra: Map<String, String> = emptyMap()) {
+        telemetry.featureUse(SCREEN, mapOf("accion" to action) + extra)
+    }
+
     fun onMessageShown() {
         _uiState.update { it.copy(message = null) }
     }
 
     companion object {
+        private const val SCREEN = "protocolos"
+
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val application = this[APPLICATION_KEY] as ZenMindApplication
                 ProtocolsViewModel(
                     repository = application.container.protocolRepository,
-                    connectivity = application.container.connectivityObserver
+                    connectivity = application.container.connectivityObserver,
+                    telemetry = application.container.telemetryRepository
                 )
             }
         }

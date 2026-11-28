@@ -2,10 +2,12 @@ package com.zenmind.kotlin.features.protocols.data
 
 import com.zenmind.kotlin.features.protocols.model.Protocol
 import com.zenmind.kotlin.features.protocols.model.ProtocolStep
+import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
+import retrofit2.http.Path
 
 interface ProtocolApiService {
 
@@ -19,6 +21,12 @@ interface ProtocolApiService {
         @Header("Authorization") authorization: String,
         @Body request: CreateProtocolRequest
     ): ProtocolDto
+
+    @POST("api/v1/protocolos/{id}/vistas")
+    suspend fun registerView(
+        @Header("Authorization") authorization: String,
+        @Path("id") id: Long
+    ): Response<Unit>
 }
 
 data class ProtocolDto(

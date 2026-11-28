@@ -86,6 +86,16 @@ class ProtocolRepository(
         }
     }
 
+    suspend fun registerView(id: Long) {
+        if (isGuest() || id < 0) return
+        try {
+            api.registerView(auth(), id)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+        }
+    }
+
     private fun requestOf(titulo: String, steps: List<ProtocolStep>) =
         CreateProtocolRequest(titulo, steps.map { StepDto(it.ordenPaso, it.descripcion) })
 
